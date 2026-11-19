@@ -120,6 +120,32 @@ Hatch lists on the boat: `PlayerShip.HatchesLeftToRight`, `HatchToConningTower`,
 `ExteriorHatch`, `CargoLoadingHatch`. Actions: `HatchOpenCloseAction`,
 `EvacuateCompartmentAction`, `StopEvacuationAction`.
 
+Details used by WS2 (2026.1):
+
+- Private fields: `lowestPoint` (Transform; vanilla's water sill, the 02 `lowY`), `pressureBlockade`
+  (bool, default true), `verticalPassage` (bool; left = lower, right = upper compartment, confirmed by
+  vanilla's overflow direction), `isAnimating`, `occlusionPortal` (from `GetComponentInParent` in `Start`),
+  `flowEffectLeft`/`flowEffectRight` (ParticleSystem), `leftCompartment`/`rightCompartment`,
+  `externalPressure`, `obstacle` (NavMeshObstacle).
+- `DoUpdate` is registered in `Start` only when both compartments exist, and removed only in `OnDestroy`,
+  so it keeps running while the hatch is disabled. Vanilla moves **no** air through horizontal hatches;
+  only the vertical passage exchanges air.
+- `CanBeOpened` (vanilla): `!pressureBlockade` → true; with a blockade compartment, false only when it
+  holds more than 1 m of water and its `FluidsPressure` exceeds 9; without one, on a ship, true iff
+  `TargetDepth < 2` and `DeckDepth < 2.5`. Read by `HatchOpenCloseAction.GetState`, which disables Open
+  with `Actions/HatchOpenCloseAction/Pressure Warning` (or the two exterior submerged warnings).
+- `OnDisable` (private, declared on `Hatch`) unlocks the hatch unless the game is quitting and it has a
+  nav obstacle. `GameState.State`: `NotStarted, Starting, Running, Gameplay, Quitting`.
+- Callers of the `Locked` setter include `NavMeshDoors`/`NavMeshLadder` traversal (crew opening on the
+  way), `StopEvacuationAction`, `HatchLockGUI`, `PortWorkersController` (cargo hatch) and the toilet door,
+  which is a compartment-less `Hatch`.
+- Locale keys: `Activators/Hatch Pressure Durability` (`{0:0}` atm), `Activators/Hatch Pressure`,
+  `Activators/Compartment Evacuated` (already red), `Activators/Leak - Pressure`. State texts accept TMP
+  rich text (`<color=...>`). Sound tag `"Pressure Damage"` (`ISoundEffectsDatabase.GetClip(tag, Transform)`).
+- Crew/Actions row `HatchOpenCloseAction` uses activator tag `Hatch`, contexts Normal, Queue, NoCharacter.
+- Equipment statuses: `Leaking` and `IsBeingRepaired` are plain `EquipmentStatus` classes; `Status<T>.Hidden`
+  is the visibility flag vanilla checks. `RepairAction` adds `IsBeingRepaired` on start.
+
 ### 1.6 Ballast, trim, buoyancy (player)
 
 - `PlayableSubmarine : Ship` (`Scene.Entities/PlayableSubmarine.cs`): `Tank[] Tanks`,

@@ -1,0 +1,22 @@
+{
+  "$comment": "WS2 rows: hatch tunables, the equalize-pressure order on hatches, and the hatch texts.",
+  "tables": {
+    "General/Settings/Damage Control": [
+      { "key": "Hatch Lock Threshold", "Value": "0.9", "$comment": "H1, D1: atm by which the seat side may exceed the far side (water head 0.1 atm/m) before the hatch locks." },
+      { "key": "Hatch Flow Rate", "Value": "2", "$comment": "H4: base air/water exchange rate through an open hatch at 1x time (02 §2.3b)." },
+      { "key": "Hatch Blow Open Chance", "Value": "0.75", "$comment": "H5, D7: per-second chance that over-pressure blows a destroyed hatch open." }
+    ],
+    "Crew/Actions": [
+      { "key": "DCEqualizePressure", "Type": "DamageControl.Game.Hatches.EqualizePressureAction", "Activator Tags": "Hatch", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter" }
+    ],
+    "Locales/Activators": [
+      { "key": "DC Equalize Pressure", "English": "Equalize pressure" },
+      { "key": "DC Equalize Pressure Description", "English": "Bleed air and water through this hatch until both sides are close enough in pressure to open it, then open it." },
+      { "key": "DC Hatch Pressure Locked", "English": "The pressure difference is holding this hatch shut." },
+      { "key": "DC Hatch Opening Side Pressure", "English": "Opening side: {0:0.00} atm" },
+      { "key": "DC Hatch Closing Side Pressure", "English": "Closing side: {0:0.00} atm" },
+      { "key": "DC Hatch Badly Damaged", "English": "This hatch is wrecked and leaking. Its seal will hardly hold more than a few atmospheres." },
+      { "key": "DC Hatch Partially Sealed", "English": "Partly sealed: the leak is much smaller." }
+    ]
+  }
+}

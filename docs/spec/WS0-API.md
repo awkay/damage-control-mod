@@ -149,7 +149,8 @@ PlayerShip Ship; bool IsKnown; string UnknownReason; int Version
 IReadOnlyList<Hatch> HatchesLeftToRight   // PlayerShip.HatchesLeftToRight
 Hatch ExteriorHatch; Hatch ConningTowerHatch
 IReadOnlyList<Tank> BallastTanks; bool IsBallastTank(Tank)
-bool TryGetGeometry(Hatch, out HatchGeometry)   // lowY/highY from the hatch BoxCollider
+bool TryGetGeometry(Hatch, out HatchGeometry)   // lowY = the hatch's lowestPoint marker, highY = lowY + collider height (WS2);
+                                                // BoxCollider bottom when the marker is missing; unlisted hatches measured on demand
 bool TryGetConningTowerLevel(out float y)       // replaces 2022.1's 101.55 m (C12)
 bool TryGetExteriorLevel(out float y)           // replaces 2022.1's 102.8 m (C12)
 bool Require(string feature)   // false + one warning per feature per session when unknown

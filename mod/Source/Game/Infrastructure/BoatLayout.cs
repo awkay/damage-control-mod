@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DamageControl.Core.Common;
 using DWS.Common.InjectionFramework;
+using HarmonyLib;
 using UBOAT.Game.Scene.Entities;
 using UBOAT.Game.Scene.Items;
 using UBOAT.Game.Scene.Physics;
@@ -126,14 +127,20 @@ namespace DamageControl.Game.Infrastructure
 			return tank != null && ballastTanks.Contains(tank);
 		}
 
-		/// <summary>lowY/highY of a hatch on the current boat (02 conventions).</summary>
+		/// <summary>
+		/// lowY/highY of a hatch (02 conventions). Hatches outside the ship's hatch lists (e.g. extra
+		/// bulkhead doors) are measured on first request and cached until the next rebuild.
+		/// </summary>
 		public static bool TryGetGeometry(Hatch hatch, out HatchGeometry result)
 		{
 			Refresh();
 			if (hatch != null && geometry.TryGetValue(hatch, out result))
 				return true;
 			result = new HatchGeometry();
-			return false;
+			if (hatch == null || !TryMeasure(hatch, out result))
+				return false;
+			geometry[hatch] = result;
+			return true;
 		}
 
 		/// <summary>lowY of the conning-tower hatch: the interior level between control room and tower (replaces 2022.1's 101.55 m).</summary>
@@ -289,9 +296,34 @@ namespace DamageControl.Game.Infrastructure
 			if (box == null)
 				return false;
 			Transform t = hatch.transform;
-			result = HatchGeometry.FromBoxCollider(t.position.y, box.center.y, box.size.y, t.lossyScale.y);
+			Transform lowest = LowestPoint(hatch);
+			if (lowest != null)
+				result = HatchGeometry.FromLowestPoint(lowest.position.y, box.size.y, t.lossyScale.y);
+			else
+				result = HatchGeometry.FromBoxCollider(t.position.y, box.center.y, box.size.y, t.lossyScale.y);
 			return result.IsValid;
 		}
+
+		/// <summary>The hatch's private lowest-point marker (the sill vanilla's water transfer uses), or null.</summary>
+		private static Transform LowestPoint(Hatch hatch)
+		{
+			if (lowestPointAccessor == null && !lowestPointAccessorFailed)
+			{
+				try
+				{
+					lowestPointAccessor = AccessTools.FieldRefAccess<Hatch, Transform>("lowestPoint");
+				}
+				catch (Exception e)
+				{
+					lowestPointAccessorFailed = true;
+					DcLog.Exception("BoatLayout: Hatch.lowestPoint", e);
+				}
+			}
+			return lowestPointAccessor != null ? lowestPointAccessor(hatch) : null;
+		}
+
+		private static AccessTools.FieldRef<Hatch, Transform> lowestPointAccessor;
+		private static bool lowestPointAccessorFailed;
 
 		private static string Describe()
 		{
