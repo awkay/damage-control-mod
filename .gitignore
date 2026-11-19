@@ -9,3 +9,4 @@ build/generated/
 *.swp
 .DS_Store
 TestResults/
+.claude/
