@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Builds mod/Data Sheets/*.DamageControl.xlsx from the row sources in data/. Plain output, no colors.
+#   ./build-sheets          write changed workbooks
+#   ./build-sheets --check  fail if a shipped workbook is out of date; write nothing
+set -u
+cd "$(dirname "$0")"
+export NO_COLOR=1 TERM=dumb DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION=0 MSBUILDTERMINALLOGGER=off
+dotnet build tools/SheetBuilder -c Release -nologo -tl:off -clp:DisableConsoleColor -v:quiet >/dev/null || {
+  dotnet build tools/SheetBuilder -c Release -nologo -tl:off -clp:DisableConsoleColor -v:minimal
+  exit 2
+}
+exec dotnet tools/SheetBuilder/bin/Release/net11.0/SheetBuilder.dll --data data --out "mod/Data Sheets" "$@"

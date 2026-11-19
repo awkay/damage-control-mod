@@ -1,0 +1,32 @@
+{
+  "$comment": "Owned by WS0. Tables the row sources in data/<area>/*.json may fill, in output order. Column headers match the game's own sheets. Add a table here (WS0) before using it.",
+  "outputSuffix": "DamageControl",
+  "localeColumns": ["English", "German", "Polish", "French", "Italian", "Spanish", "Russian", "Chinese", "Korean", "Turkish", "Portuguese", "Czech", "Japanese", "Ukrainian"],
+  "workbooks": [
+    {
+      "name": "General",
+      "sheets": [
+        { "name": "Background Tasks", "groups": [ { "name": "/", "columns": ["Class", "Start Event", "…"] } ] },
+        { "name": "Settings", "groups": [ { "name": "/Damage Control", "columns": ["Value"] } ] }
+      ]
+    },
+    {
+      "name": "Crew",
+      "sheets": [
+        { "name": "Actions", "groups": [ { "name": "/", "columns": ["Type", "Activator Tags", "Character Tags", "Character Tags (Soft Req)", "Contexts", "Group", "Subgroup", "…"] } ] }
+      ]
+    },
+    {
+      "name": "Locales",
+      "sheets": [
+        { "name": "Activators", "locale": true },
+        { "name": "Actions", "locale": true },
+        { "name": "Items", "locale": true },
+        { "name": "Parameters", "locale": true },
+        { "name": "Tooltips", "locale": true },
+        { "name": "UI", "locale": true },
+        { "name": "Statements", "locale": true }
+      ]
+    }
+  ]
+}

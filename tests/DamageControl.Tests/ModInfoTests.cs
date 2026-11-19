@@ -1,4 +1,4 @@
-using DamageControl.Core;
+using DamageControl.Core.Common;
 using Xunit;
 
 namespace DamageControl.Tests
@@ -11,14 +11,10 @@ namespace DamageControl.Tests
             Assert.Equal("Damage Control 0.1.0", ModInfo.Describe());
         }
 
-        [Theory]
-        [InlineData(-0.5f, 0f)]
-        [InlineData(0.25f, 0.25f)]
-        [InlineData(3f, 1f)]
-        [InlineData(float.NaN, 0f)]
-        public void Clamp01KeepsFractionsInRange(float input, float expected)
+        [Fact]
+        public void LogPrefixNamesTheMod()
         {
-            Assert.Equal(expected, ModInfo.Clamp01(input));
+            Assert.Equal("[Damage Control] ", ModInfo.LogPrefix);
         }
     }
 }

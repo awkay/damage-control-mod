@@ -1,0 +1,30 @@
+{
+  "$comment": "WS0 rows: settings store, tunables, the three settings toggles on the Workshop activator, and their text.",
+  "tables": {
+    "General/Background Tasks": [
+      { "key": "DamageControlSettings", "Class": "DamageControl.Game.Settings.DamageControlSettingsTask", "Start Event": "CampaignStart" }
+    ],
+    "General/Settings/Damage Control": [
+      { "key": "Debug", "Value": "False", "$comment": "R14: extra log lines and diagnostic text. Set True only for testing." }
+    ],
+    "Crew/Actions": [
+      { "key": "DCToggleHatchPressureBlocking", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = HatchPressureBlocking" },
+      { "key": "DCToggleAutoLeakBlocking", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = AutoLeakBlocking" },
+      { "key": "DCToggleAutoCarryWounded", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = AutoCarryWounded" }
+    ],
+    "Locales/Activators": [
+      { "key": "DC Enable Hatch Pressure Blocking", "English": "Enable hatch pressure blocking" },
+      { "key": "DC Enable Hatch Pressure Blocking Description", "English": "From now on a closed hatch stays shut while the water and air pushing on one side clearly outweigh the other side. Equalize the pressure before opening it." },
+      { "key": "DC Disable Hatch Pressure Blocking", "English": "Disable hatch pressure blocking" },
+      { "key": "DC Disable Hatch Pressure Blocking Description", "English": "Hatches can be opened whatever the pressure difference across them." },
+      { "key": "DC Enable Automatic Leak Blocking", "English": "Let sailors block leaks on their own" },
+      { "key": "DC Enable Automatic Leak Blocking Description", "English": "Free sailors will again go and block new leaks without waiting for an order." },
+      { "key": "DC Disable Automatic Leak Blocking", "English": "Stop sailors blocking leaks on their own" },
+      { "key": "DC Disable Automatic Leak Blocking Description", "English": "Sailors block a leak only when you order it." },
+      { "key": "DC Enable Automatic Wounded Carrying", "English": "Let the crew carry the wounded to safety" },
+      { "key": "DC Enable Automatic Wounded Carrying Description", "English": "Crewmen will again carry injured shipmates out of danger without waiting for an order." },
+      { "key": "DC Disable Automatic Wounded Carrying", "English": "Stop the crew carrying the wounded on their own" },
+      { "key": "DC Disable Automatic Wounded Carrying Description", "English": "Injured crewmen stay where they fell until you send someone to help. Divers are still pulled back aboard." }
+    ]
+  }
+}

@@ -278,6 +278,14 @@ patches `LoadActions` corroborates this). `BackgroundTasksManager`, by contrast,
 `CharacterActionsDatabase.LoadActions` and register our rows by resolving with
 `ModManager.GetType`, or reuse a game action type and only add data rows.
 
+Implemented (WS0, `Game/Registration/ActionRegistrationPatch`): a postfix on the private
+`LoadActions` takes the private dictionaries `actionsByName`, `actionsByActivatorTag` and
+`actionsByCharacterTag` (Harmony `___field` injection). It re-walks `Crew/Actions` and registers rows
+whose type is in the `DamageControl.` namespace, resolved in our assembly only. The template is built
+through the `(GameDataRow)` constructor, as the game does. The postfix runs at `Priority.Last` and skips
+names already present. Note that `CharacterActionsDatabase` is a `GameplayStart` task, so `LoadActions`
+runs again on every entry to gameplay, each time on a fresh instance.
+
 ### 3.4 How an action reaches a target and the wheel
 
 - `Activator : MonoBehaviour` (abstract, `Activators/Activator.cs`) sits on interactable
@@ -468,6 +476,21 @@ re-register in `Resume` if that matters). `TaskCreated` fires for fresh instance
    is not re-fired for a restored game, so no duplicate is created.
 4. Back to menu -> `CampaignStop` -> `Finish()`.
 
+**Saves made before a mod was installed get no `CampaignStart` task.** `CampaignStart` fires only for a
+brand-new campaign. After a save loads, `SavesManagerOnLoaded` calls `LoadTasks(true)`, which starts
+only rows whose event is currently active, and `CampaignStart` is not active for a restored game.
+`BackgroundTasksManager.StartTask<T>()` runs a defined task through the normal path, and a task
+declared with `CampaignStart` is added to the saved list. WS0 calls it from an action queued on
+`SavesManager.Loaded` (the event hands out a `Queue<Action>` that runs after all handlers) when
+`GetRunningTask<T>()` returns null. The game enters `GameState.State.Gameplay` when "Main Scene"
+loads, which is before the save is deserialized, and fires `GameplayStart` then `CampaignStart` in the
+same handler.
+
+**ExecutionQueue listeners are saved.** `ExecutionQueue.CustomSerialization` writes the update,
+fixed-update and timed queues, which hold delegates, into the save. Code in a transient object should
+not leave listeners registered across a save. Prefer events, or remove the listener in `OnFinished`.
+Timed listeners stop when they return `float.NaN`.
+
 ### 6.4 What gets serialized (`UBOAT.Game.Core.Serialization`)
 
 The game uses its own reflection serializer (`GameStateSerializer` /
@@ -590,6 +613,16 @@ Consequences:
 Override `CharacterAction.GetIconName(...)` to return our unique icon name, so we never
 collide with base keys. If no icon is found, the wheel silently uses
 `Generic Interaction`, so missing art is not fatal.
+
+Implemented (WS0, `Game/Infrastructure/IconRegistry`, route 2). In `OnLoaded`,
+`resourceManager.GetAssetsBelow("Icons/DamageControl")` lists our raw keys, for which `resourceMap`
+holds every ancestor folder. Each texture is loaded with `RetrieveAssetAsync<Texture2D>`. We wrap it
+with `Sprite.Create(tex, full rect, pivot (0.5, 0.5), 100 ppu)`, or keep the Texture2D for
+`Actions - Cursor`, and store a `DirectResource` under `Icons/<Category>/<IconName>` in the private
+`resources` dictionary (`AccessTools.FieldRefAccess`). `DirectResource.AddUsage`/`RemoveUsage`/`Unload`
+are no-ops, and `ClearAllOtherSceneResources` removes only `SceneResource`s, so the entries live for the
+whole session. Lookup types in the 2026.1 UI: wheel, `Actions`, `Actions (Banners)` and
+`Statuses (Portraits)` request `Sprite`; `Actions - Cursor` requests `Texture2D`.
 
 ## 8. Hook points
 

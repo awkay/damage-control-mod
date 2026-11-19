@@ -7,7 +7,7 @@ namespace PatchVerifier;
 /// Usage:
 ///   PatchVerifier refs    --mod DIR --props FILE      write MSBuild props mirroring the loader's compile setup
 ///   PatchVerifier compile --mod DIR --out DLL         game-exact compile (+ Source/Core purity check)
-///   PatchVerifier verify  --mod DIR --dll DLL         manifest, data sheets, security, Harmony patches
+///   PatchVerifier verify  --mod DIR --dll DLL         manifest, security, Harmony patches, data-sheet contents
 ///   PatchVerifier all     --mod DIR --out DLL         compile then verify
 /// Options: --managed DIR (default $UBOAT_MANAGED or the Steam library path), --game-version 2026.1
 /// Exit code: 0 ok, 1 errors found, 2 usage / environment problem.
@@ -54,12 +54,12 @@ public static class Program
                 GameCompiler.Compile(env, settings, modDir, manifest, Required(opts, "out"), report);
                 break;
             case "verify":
-                Verify(env, settings, manifest, Required(opts, "dll"), report);
+                Verify(env, settings, manifest, modDir, Required(opts, "dll"), report);
                 break;
             case "all":
                 string dll = Required(opts, "out");
                 if (GameCompiler.Compile(env, settings, modDir, manifest, dll, report))
-                    Verify(env, settings, manifest, dll, report);
+                    Verify(env, settings, manifest, modDir, dll, report);
                 break;
             default:
                 Console.WriteLine("unknown command " + cmd);
@@ -70,7 +70,7 @@ public static class Program
         return report.Errors > 0 ? 1 : 0;
     }
 
-    private static void Verify(GameEnvironment env, RoslynSettingsAsset settings, ManifestCheck.Result manifest, string dll, Report report)
+    private static void Verify(GameEnvironment env, RoslynSettingsAsset settings, ManifestCheck.Result manifest, string modDir, string dll, Report report)
     {
         if (!File.Exists(dll))
         {
@@ -78,8 +78,9 @@ public static class Program
             return;
         }
         SecurityCheck.Run(settings, manifest.Permissions, dll, report);
-        using var hv = new HarmonyVerifier(env, dll, report);
-        hv.Run();
+        using (var hv = new HarmonyVerifier(env, dll, report))
+            hv.Run();
+        DataSheetCheck.Run(env, modDir, dll, report);
     }
 
     private static void WriteProps(GameEnvironment env, RoslynSettingsAsset settings, ManifestCheck.Result manifest, string path, Report report)
@@ -131,7 +132,7 @@ public static class Program
     {
         AssemblyLoadContext.Default.Resolving += (ctx, name) =>
         {
-            if (name.Name is null || !(name.Name.StartsWith("Trivial.") || name.Name.StartsWith("UnityEngine"))) return null;
+            if (name.Name is null || !(name.Name.StartsWith("Trivial.") || name.Name.StartsWith("UnityEngine") || name.Name == "FastExcel")) return null;
             string p = Path.Combine(managed, name.Name + ".dll");
             return File.Exists(p) ? ctx.LoadFromAssemblyPath(p) : null;
         };
