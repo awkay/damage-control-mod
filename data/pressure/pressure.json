@@ -1,0 +1,18 @@
+{
+  "$comment": "WS1 rows: text for the buoyancy tooltip breakdown (P12b) and the bilge air-pressure line (P13).",
+  "tables": {
+    "General/Settings/Damage Control": [
+      { "key": "Hatch Slot Interaction Types", "Value": "True", "$comment": "P7: also set the interaction type (animation) of hatch slots. Set False if crew animations at hatches look wrong; water tolerances still apply." }
+    ],
+    "Locales/Tooltips": [
+      { "key": "DC Ballast Total", "English": "Ballast tanks hold {0:0.0} m<sup>3</sup> of water ({1:0}% of their capacity)." },
+      { "key": "DC Ballast Tank", "English": "    {0}: {1:0.0} m<sup>3</sup> ({2:0}%)" },
+      { "key": "DC Flooding Total", "English": "Water inside the hull: {0:0.0} m<sup>3</sup>." },
+      { "key": "DC Flooding Compartment", "English": "    {0}: {1:0.0} m<sup>3</sup>" },
+      { "key": "DC Flooding Compartment Alarm", "English": "    {0}: <color=red>{1:0.0} m<sup>3</sup></color>" }
+    ],
+    "Locales/Activators": [
+      { "key": "DC Compartment Air Pressure", "English": "Air pressure here: {0:0.00} atm." }
+    ]
+  }
+}
