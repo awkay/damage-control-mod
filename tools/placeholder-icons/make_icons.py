@@ -4,7 +4,7 @@
 Stdlib only. Usage:
     python3 tools/placeholder-icons/make_icons.py OUT_DIR GLYPH:BADGE:"Icon Name" ...
 
-GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic.
+GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust.
 BADGE is one of: none, on, off (a tick or a slash in the lower-right corner).
 For each icon it writes "<Icon Name>.png" (white) and "<Icon Name> (Highlighted).png" (amber).
 All art is generated geometry; nothing is copied from any other mod or game.
@@ -63,6 +63,10 @@ GLYPHS = {
     "valve": lambda: union(ring(56, 60, 34, 8), line(30, 34, 82, 86, 7), line(30, 86, 82, 34, 7)),
     "wrench": lambda: union(line(36, 88, 74, 50, 14), minus(disc(80, 42, 20), rect(76, 14, 112, 46))),
     "generic": lambda: union(ring(56, 60, 36, 8), disc(56, 60, 10)),
+    # exhaust (WS4): smoke puffs over an arrow into a tank whose water is being pushed down
+    "exhaust": lambda: union(disc(34, 22, 9), disc(50, 16, 11), disc(68, 22, 9),
+                             line(56, 30, 56, 66, 6), line(56, 68, 44, 56, 6), line(56, 68, 68, 56, 6),
+                             minus(rect(18, 54, 94, 106), rect(25, 61, 87, 99)), rect(29, 88, 83, 95)),
 }
 
 BADGES = {

@@ -1,0 +1,26 @@
+{
+  "$comment": "WS4 rows: the Exhaust Blow order on the valve station (B2, manual only per 00 D5), its tunables and its text.",
+  "tables": {
+    "Crew/Actions": [
+      { "key": "DCExhaustBlow", "Type": "DamageControl.Game.Ballast.ExhaustBlowAction", "Activator Tags": "Valves", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter" }
+    ],
+    "General/Settings/Damage Control": [
+      { "key": "Exhaust Blow Flow Per Revolution", "Value": "0.1933768", "$comment": "Air units led into the ballast per diesel crankshaft revolution (03 §2.A)." },
+      { "key": "Exhaust Blow Stage 2 Water Threshold", "Value": "5", "$comment": "The middle tanks get exhaust once both end tanks hold less water than this (03 §2.A)." },
+      { "key": "Exhaust Blow Completion Water", "Value": "0.05", "$comment": "The blow is finished when the main ballast holds at most this much water in total (03 §7.3 epsilon)." },
+      { "key": "Exhaust Blow Minimum Diesel RPM", "Value": "1", "$comment": "Below this the diesel counts as stopped (03 §7.4)." },
+      { "key": "Exhaust Blow Deck Clearance", "Value": "0", "$comment": "Deck depth in metres below which the deck counts as above water; 0 is the waterline (03 §7.4)." },
+      { "key": "Exhaust Blow Cancel Grace Seconds", "Value": "3", "$comment": "A running blow is cancelled after the diesel or deck gate has failed this long without a break (game seconds)." }
+    ],
+    "Locales/Activators": [
+      { "key": "DC Exhaust Blow", "English": "Blow ballast with diesel exhaust" },
+      { "key": "DC Exhaust Blow Description", "English": "Lead the running diesel's exhaust into the main ballast tanks and drive the rest of the water out. Saves the compressed-air bottles. Only works on the surface with the diesel running; the faster it turns, the faster the tanks empty." },
+      { "key": "DC Exhaust Blow Progressing Description", "English": "Emptying the ballast tanks with diesel exhaust" }
+    ],
+    "Locales/Actions": [
+      { "key": "DC Warning Diesel Not Running", "English": "The diesel must be running." },
+      { "key": "DC Warning Deck Under Water", "English": "The deck must be clear of the water." },
+      { "key": "DC Warning Ballast Empty", "English": "The ballast tanks are already empty." }
+    ]
+  }
+}

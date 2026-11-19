@@ -652,3 +652,44 @@ whole session. Lookup types in the 2026.1 UI: wheel, `Actions`, `Actions (Banner
 | `Tank.DoUpdate`, `LeakableEquipment.DoUpdate`, `InteractionWheelUI.LateUpdate` (`async UniTaskVoid`) | per-frame visual paths / async state machines (patching an async method patches only the stub). |
 | `Hull.TotalBallast` private setter | side effects (mass, health) and inlined into `Hull.Update`. |
 | `CharacterAction.OnPreStart` in general | `async` -> patch target is the state-machine stub; override in a subclass instead. |
+
+## 9. Ballast valve, diesel and crew navigation (WS4)
+
+- **Valve on/off.** `Device.SetDisableFlag(DeviceDisableFlag.TurnedOff, true)` sets the component's
+  `enabled` to false (enabled only while no disable flag is set), so `FloodingAndBlowingValve.FixedUpdate`
+  stops running: a turned-off valve does not touch the tanks, and an action can then drive `Tank.Air` itself.
+  The `Mode` setter is a no-op when the mode is unchanged; on a change it resets the flooding timer and closes
+  every ballast vent (`Openess` 0, `ExtraPressure` 0). Vanilla blow orders set `OptimalBlowing` and clear
+  `TurnedOff`; the valve sets `TurnedOff` itself when its blow target is reached.
+- **Valve order gating (2026.1).** The vanilla valve orders check `CheckActivatorUseConditions(RequireWorkingDevice
+  | DisallowDuplicateActions | CheckForBlockingItems)` and then the static `CheckInteractableUseConditions(interactable,
+  "Use", "Default", character, SlotUsageFlags.AllowUnderWaterAlways, fillDetails, isPlayerOrder)`; their rows are
+  on activator tag `Valves`, contexts `Normal, Queue, NoCharacter`, no group. Compressed-air "blow" is hidden while
+  `Mode < AdjustmentToNeutral`. `AutomaticActionsController` queues "blow" only when `TargetDepth == 0` and
+  `Mode >= AdjustmentToNeutral`, and "flood" only when `TargetDepth > 0.05`, the mode is a blowing mode and nobody
+  uses the valve station.
+- **Ballast tank order.** `PlayableSubmarine.BallastTanks` is a serialized array. The valve treats index 0 and
+  the last index as the end tanks (deck-awash venting) and handles 3, 5 and 8 tank layouts.
+- **Diesel.** `PlayerShip.DieselEngine` is a `PlayerShipEngine` (a `Device`). It is unmounted (disabled flag) while
+  the electric motors drive the boat. `CurrentSignedRPM` eases toward the current gear preset's RPM (negative
+  astern) and is zeroed when the component is disabled.
+- **Deck depth.** `Ship.DeckDepth` is clamped at 0; `Ship.DeckDepthUnclamped` is negative while the deck is
+  above the water.
+- **Held device orders.** `DeviceUseAction.UpdateAction` completes the action once the character's
+  `SkillProgress` reaches 1 (or after `AnimationTimeout`, NaN = never). The animator's `UpdateSkillProgress`
+  state behaviour writes `SkillProgress` too, so a held order rewrites it below 1 every frame before calling the
+  base. `StopMainCharacter` calls `OnDeviceUsed` only when `SkillProgress >= 1`.
+- **Reachability.** `NavMeshNavigator.IsDestinationReachable(Vector3 pos, bool playerOrder = false)` still uses
+  the 2022.1 constants 101.55 / 102.8 / 106 and returns true at once for player orders; for other orders it walks
+  `HatchesLeftToRight` by `ObstaclePositionZ` (starting at the hatch beside `PlayableCharacter.CurrentCompartment`)
+  and refuses compartments with `Evacuation`, plus `Evacuated` checks for the tower and exterior levels. It does
+  not look at `Hatch.CanBeOpened`.
+- **Hatch links.** `NavMeshDoors` (private `hatch`) is active only while its hatch is `Locked` (closed);
+  `TraverseStart(NavMeshNavigator navigator)` unlocks the hatch at once. `NavMeshLadder` (public `Hatch`)
+  unlocks its hatch part-way through the climb. Neither checks `CanBeOpened`.
+- **Cancelling orders.** `InteractiveCharacter.CancelActiveOrders(profitMin, profitMax)` removes the first
+  active AI behaviour whose profit is in the band and re-runs the AI; `CancelOrders(profit = 2.3)` removes every
+  behaviour with exactly that profit (device-use orders are added at 2.3). The 2022.1 call
+  `CancelActiveOrders(0, 5)` therefore means "drop the current order-level behaviour".
+- **Evacuation.** `EvacuateToSafetyAction.StartCharacter` sets `CanBeStopped = false` and then calls the private
+  `Escape(CharacterData)`; a timed update calls `Escape` again for each new leg.
