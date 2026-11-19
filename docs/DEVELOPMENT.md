@@ -311,3 +311,45 @@ than the xlsx's.
 ### Per feature
 
 13. For each new feature: exercise it, then save, quit, reload and confirm its state persists.
+
+### WS4: ballast and navigation
+
+The ballast area adds 3 icons (wheel normal and highlighted, action icon) to the `icons ready` count.
+Set `General/Settings/Damage Control/Debug` to True for the `exhaust blow ...` and `... stopped at blocked hatch ...`
+lines. Tunables are the `Exhaust Blow ...` rows in the same group (`data/ballast/ballast.json`).
+
+WS4-1. **Exhaust Blow listed (B2).** Open the wheel on the flooding-and-blowing valve station (control room).
+   "Blow ballast with diesel exhaust" appears with its icon among the valve orders. Docked: it is disabled.
+WS4-2. **Gates.** Submerged, or surfaced on the electric motors: the entry is disabled, and hovering shows
+   "The diesel must be running." or "The deck must be clear of the water.". With the ballast already blown dry:
+   "The ballast tanks are already empty."
+WS4-3. **Blow (03 §6 #8).** Surface on compressed air only partly (stop the blow early, or surface with the deck
+   just clear), switch to the diesels at any ahead speed, then order Exhaust Blow. The crewman walks to the valve
+   and works it; his progress bar rises; the ballast tanks empty; the HP air bottle reading does **not** drop
+   during the blow; the order completes on its own (no stall at 99.9 %) and the depth preset shows Surface.
+   Higher diesel speed empties the tanks visibly faster. Afterwards the vanilla "blow" and "flood" orders still
+   work, and diving normally floods the tanks again.
+WS4-4. **Cancel.** During a blow, stop the diesel (all stop or switch to E-motors): within about 3 game seconds
+   the crewman leaves the valve and the tanks stop emptying. Repeat by diving during a blow (deck under water):
+   the order cancels too. In heavy seas, waves washing briefly over the deck must not cancel it.
+WS4-5. **Other boat types.** Repeat WS4-3 on a boat type with a different number of ballast tanks (Type II
+   or IX): the order completes and no exception mentioning `ExhaustBlow` appears in the log.
+WS4-6. **Save mid-blow.** Save while a blow runs and load: either the order resumes (the valve is taken over
+   again) or it is gone from the queue; nothing throws.
+WS4-7. **Blocked hatch, reachability (B9, 03 §6 #24).** Turn hatch pressure blocking on, flood a compartment
+   until its hatch cannot be opened, close it. Order a crewman to a station behind that hatch: the order is
+   unavailable for that crewman (shown disabled or refused) instead of being accepted. Orders on the near
+   side still work. Open hatches are never treated as blocked.
+WS4-8. **Blocked hatch, traverse (B10, 03 §6 #26).** With the same blocked hatch, make a crewman already
+   walking toward it (order given just before the hatch became blocked): he stops at the hatch and does not
+   pass through; the hatch stays closed (this also needs WS2's lock guard, H2). The exterior (bridge) hatch
+   ladder is not affected: crew still go up and down to the bridge when surfaced.
+WS4-9. **Conning tower.** At periscope depth, crew can still be ordered from the control room into the
+   conning tower and back (the conning-tower hatch must not count as blocked submerged). If it is refused,
+   report the hatch's `CanBeOpened` state from the debug log.
+WS4-10. **Evacuation cancel (B11, 03 §6 #26).** Order a compartment evacuated; while crew are leaving, select a
+   crewman and give him another order (or stop his current action): the evacuation is cancelled for him and he
+   follows the new order. Others keep evacuating.
+WS4-11. **No regressions.** With no hatch blocked, crew move between compartments, to the bridge and to their
+   stations as in vanilla; no `NullReferenceException` mentioning `DamageControl` and no
+   `patch Reachability threw` (or `DoorTraverse`, `LadderTraverse`, `EvacuationCancel`) line in the log.
