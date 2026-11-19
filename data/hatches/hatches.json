@@ -3,7 +3,7 @@
   "tables": {
     "General/Settings/Damage Control": [
       { "key": "Hatch Lock Threshold", "Value": "0.9", "$comment": "H1, D1: atm by which the seat side may exceed the far side (water head 0.1 atm/m) before the hatch locks." },
-      { "key": "Hatch Flow Rate", "Value": "2", "$comment": "H4: base air/water exchange rate through an open hatch at 1x time (02 §2.3b)." },
+      { "key": "Hatch Flow Rate", "Value": "2", "$comment": "H4: base air/water exchange rate k through hatches at 1x time (02 §2.3b), a multiplier on both. The default 2 makes open-hatch water flow match vanilla 2026.1 (2 m3/s per metre of level difference at 1x); closed leaks stay 2 % of it." },
       { "key": "Hatch Blow Open Chance", "Value": "0.75", "$comment": "H5, D7: per-second chance that over-pressure blows a destroyed hatch open." }
     ],
     "Crew/Actions": [

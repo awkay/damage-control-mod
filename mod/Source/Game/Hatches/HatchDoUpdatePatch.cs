@@ -19,7 +19,8 @@ namespace DamageControl.Game.Hatches
 	/// physical seal (02 §2.3):
 	/// <list type="number">
 	/// <item>a. occlusion portal, reimplemented from the behavioural description;</item>
-	/// <item>b. step s = min(game dt, 0.5 s) x damped rate;</item>
+	/// <item>b. the frame's game dt x damped rate (at most 8, vanilla's clamp), integrated in substeps of at
+	/// most 0.5 game seconds each (<see cref="HatchExchange.Substeps"/>);</item>
 	/// <item>c. destroyed-hatch blow-open as a per-second hazard (D7);</item>
 	/// <item>d. Leaking status upkeep;</item>
 	/// <item>e. flow gate: open, or closed and leaking at 2 % x seal factor;</item>
@@ -60,12 +61,12 @@ namespace DamageControl.Game.Hatches
 				UpdatePortal(__instance, ___occlusionPortal, ___isAnimating, left, right);
 
 				SimClock clock = GameClock.Now();
-				float step = HatchExchange.FrameStep(clock, HatchRuntime.FlowRate);
+				FrameSubsteps substeps = HatchExchange.Substeps(clock, HatchRuntime.FlowRate);
 				UpdateDamage(__instance, ___isAnimating, clock);
 
 				bool open = !__instance.Locked;
 				bool leaking = !open && __instance.HasStatus<Leaking>();
-				float gated = HatchExchange.GatedStep(step, open, leaking, HatchSeals.Shared.SealFactor(__instance));
+				float gated = HatchExchange.GatedStep(substeps.Step, open, leaking, HatchSeals.Shared.SealFactor(__instance));
 				if (!open && !leaking)
 				{
 					SetJets(___flowEffectLeft, ___flowEffectRight, JetEffect.None);
@@ -74,21 +75,23 @@ namespace DamageControl.Game.Hatches
 				if (gated <= 0f || HatchRuntime.SameWaterBody(left, right))
 					return false;
 
-				HatchSide l = HatchRuntime.ReadSide(left);
-				HatchSide r = HatchRuntime.ReadSide(right);
-				HatchFlow flow;
-				if (___verticalPassage)
+				// Each substep re-reads both compartments, so the kernel's guards (air floor, no
+				// equalization overshoot, no overfill) hold per substep against the current state.
+				float verticalOpening = HatchExchange.VerticalOpeningHeight(geometry.LowY, left.FloorElevation);
+				JetEffect jet = JetEffect.None;
+				for (int i = 0; i < substeps.Count; i++)
 				{
-					flow = HatchExchange.Vertical(l, r, HatchExchange.VerticalOpeningHeight(geometry.LowY, left.FloorElevation), gated);
+					HatchSide l = HatchRuntime.ReadSide(left);
+					HatchSide r = HatchRuntime.ReadSide(right);
+					HatchFlow flow = ___verticalPassage
+						? HatchExchange.Vertical(l, r, verticalOpening, gated)
+						: HatchExchange.Horizontal(l, r, geometry, gated);
 					HatchRuntime.Apply(left, right, flow);
-					SetJets(___flowEffectLeft, ___flowEffectRight, JetEffect.None);
+					jet = ___verticalPassage ? JetEffect.None : flow.Jet;
+					if (flow.Air == 0.0 && flow.Water == 0.0)
+						break; // at rest: later substeps would see the same state
 				}
-				else
-				{
-					flow = HatchExchange.Horizontal(l, r, geometry, gated);
-					HatchRuntime.Apply(left, right, flow);
-					SetJets(___flowEffectLeft, ___flowEffectRight, flow.Jet);
-				}
+				SetJets(___flowEffectLeft, ___flowEffectRight, jet);
 				return false;
 			}
 			catch (Exception e)

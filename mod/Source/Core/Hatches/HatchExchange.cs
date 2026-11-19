@@ -39,6 +39,33 @@ namespace DamageControl.Core.Hatches
 	}
 
 	/// <summary>
+	/// How one frame's hatch exchange is integrated (see <see cref="HatchExchange.Substeps"/>): run the
+	/// kernel <see cref="Count"/> times with <see cref="Step"/> each, re-reading both sides in between.
+	/// </summary>
+	public struct FrameSubsteps
+	{
+		public readonly int Count;
+		public readonly float Step;
+
+		public FrameSubsteps(int count, float step)
+		{
+			Count = count > 0 && step > 0f ? count : 0;
+			Step = Count > 0 ? step : 0f;
+		}
+
+		/// <summary>Step summed over the frame.</summary>
+		public float Total
+		{
+			get { return Count * Step; }
+		}
+
+		public override string ToString()
+		{
+			return "FrameSubsteps(" + Count + " x " + Step + ")";
+		}
+	}
+
+	/// <summary>
 	/// Rate constants of one user of the exchange kernel (00 C3): the hatch passage itself (02 §2.3) and
 	/// the equalize action (01 §2.11) share the formulas and differ only here.
 	/// </summary>
@@ -65,7 +92,13 @@ namespace DamageControl.Core.Hatches
 		/// <summary>Gain of the (1.01 - fill)² inflow choke; 0 disables the choke.</summary>
 		public readonly float WaterChokeGain;
 
-		public ExchangeProfile(float airSlope, float airCap, float airMinClearance, float airEpsilon, bool airPassesOverDryFloor, float waterEpsilon, float waterChokeGain)
+		/// <summary>
+		/// Water moved per unit step per atm of driving term, before the choke. 1 moves "Δ atm x step";
+		/// <see cref="HatchExchange.PassageWaterGain"/> converts Δ back to metres of water head first.
+		/// </summary>
+		public readonly float WaterGain;
+
+		public ExchangeProfile(float airSlope, float airCap, float airMinClearance, float airEpsilon, bool airPassesOverDryFloor, float waterEpsilon, float waterChokeGain, float waterGain)
 		{
 			AirSlope = airSlope;
 			AirCap = airCap;
@@ -74,18 +107,19 @@ namespace DamageControl.Core.Hatches
 			AirPassesOverDryFloor = airPassesOverDryFloor;
 			WaterEpsilon = waterEpsilon;
 			WaterChokeGain = waterChokeGain;
+			WaterGain = waterGain;
 		}
 
-		/// <summary>An open (or leaking) hatch, 02 §2.3g.</summary>
+		/// <summary>An open (or leaking) hatch, 02 §2.3g, with water in metres of head (vanilla parity, see <see cref="HatchExchange.PassageWaterGain"/>).</summary>
 		public static ExchangeProfile Passage
 		{
-			get { return new ExchangeProfile(10f, 10f, 0f, 0.001f, false, 1e-6f, 10f); }
+			get { return new ExchangeProfile(10f, 10f, 0f, 0.001f, false, 1e-6f, 10f, HatchExchange.PassageWaterGain); }
 		}
 
 		/// <summary>The equalize action's vent and valve, 01 §2.11.</summary>
 		public static ExchangeProfile Equalize
 		{
-			get { return new ExchangeProfile(250f, 50f, 0.01f, 0.001f, true, 0.001f, 0f); }
+			get { return new ExchangeProfile(250f, 50f, 0.01f, 0.001f, true, 0.001f, 0f, 1f); }
 		}
 	}
 
@@ -99,11 +133,36 @@ namespace DamageControl.Core.Hatches
 	/// </summary>
 	public static class HatchExchange
 	{
-		/// <summary>Per-frame cap on the game-time delta (02 §2.3b, 01 §2.11).</summary>
+		/// <summary>
+		/// Longest game time one kernel step covers (02 §2.3b, 01 §2.11). <see cref="FrameStep(SimClock, float)"/>
+		/// caps the frame at this; <see cref="Substeps"/> splits the frame into steps of at most this instead.
+		/// </summary>
 		public const float MaxFrameSeconds = 0.5f;
 
-		/// <summary>Base exchange rate k at 1x compression (02 §2.3b).</summary>
+		/// <summary>Upper bound on the total step of one frame: vanilla 2026.1's own per-frame clamp.</summary>
+		public const float MaxFrameTotalStep = 8f;
+
+		/// <summary>
+		/// Most substeps per frame. Only reached when a frame spans more than 8 game seconds; the substep
+		/// step is then at most 8 / 16 = 0.5, still below the 1x half-second step (1.0).
+		/// </summary>
+		public const int MaxSubsteps = 16;
+
+		/// <summary>
+		/// Base exchange rate k at 1x compression (02 §2.3b). Vanilla 2026.1's open hatch uses the same 2,
+		/// with the same 2 / sqrt(S) damping, as its water flow per metre of level difference per second.
+		/// </summary>
 		public const float DefaultRate = 2f;
+
+		/// <summary>
+		/// Water gain of the hatch passage: 1 / <see cref="WaterHead.AtmPerMetreOfWater"/> = 10. The 02 §2.3g
+		/// driving term Δ is in atm (D1); the passage moves Δ expressed in metres of water head x step, so
+		/// a level difference of h metres at equal air pressure moves h x step, exactly vanilla 2026.1's
+		/// open-hatch rate (Δ = 0.1 h atm alone would move a tenth of it). An air-pressure difference drives
+		/// like the equivalent head (1 atm = 10 m); vanilla has no such term. The choke and the closed-hatch
+		/// leak (2 % of this) act on the converted amount, as in the original's units.
+		/// </summary>
+		public const float PassageWaterGain = 1f / WaterHead.AtmPerMetreOfWater;
 
 		/// <summary>The equalize step is the hatch step divided by this (01 §2.11: k = dt x r / 10).</summary>
 		public const float EqualizeDivisor = 10f;
@@ -133,6 +192,40 @@ namespace DamageControl.Core.Hatches
 		public static float FrameStep(SimClock clock)
 		{
 			return FrameStep(clock, DefaultRate);
+		}
+
+		/// <summary>
+		/// Substep plan of the hatch exchange (02 §2.3b without losing time, C2 note): the frame's whole game
+		/// dt x damped rate, clamped at <see cref="MaxFrameTotalStep"/> like vanilla, split into
+		/// ceil(dt / 0.5 s) equal substeps (at most <see cref="MaxSubsteps"/>). Totals therefore match
+		/// vanilla at any compression while each substep stays as stable as a capped 0.5 s frame. Empty
+		/// while paused.
+		/// </summary>
+		public static FrameSubsteps Substeps(SimClock clock, float baseRate)
+		{
+			float dt = clock.GameDt;
+			float rate = clock.DampedRate(baseRate);
+			if (!(dt > 0f) || !(rate > 0f) || !DcMath.IsFinite(dt) || !DcMath.IsFinite(rate))
+				return new FrameSubsteps(0, 0f);
+			float total = dt * rate;
+			if (total > MaxFrameTotalStep)
+			{
+				total = MaxFrameTotalStep;
+				dt = total / rate;
+			}
+			// The small tolerance keeps a frame of exactly 0.5 s (in float) at one substep.
+			int count = (int)Math.Ceiling(dt / MaxFrameSeconds - 1e-4);
+			if (count < 1)
+				count = 1;
+			else if (count > MaxSubsteps)
+				count = MaxSubsteps;
+			return new FrameSubsteps(count, total / count);
+		}
+
+		/// <summary><see cref="Substeps(SimClock, float)"/> at <see cref="DefaultRate"/>.</summary>
+		public static FrameSubsteps Substeps(SimClock clock)
+		{
+			return Substeps(clock, DefaultRate);
 		}
 
 		/// <summary>Equalize factor k of 01 §2.11: the hatch step / 10 (0.2/s at 1x).</summary>
@@ -294,7 +387,7 @@ namespace DamageControl.Core.Hatches
 		/// <summary>Water moving from <paramref name="source"/> to <paramref name="sink"/> for driving term d &gt; 0 (always &gt;= 0).</summary>
 		private static double WaterAmount(double d, HatchSide source, HatchSide sink, ExchangeProfile profile, float step)
 		{
-			double amount = Math.Min(source.Water, d * step);
+			double amount = Math.Min(source.Water, d * profile.WaterGain * step);
 			if (profile.WaterChokeGain > 0f)
 				amount = Math.Min(amount, Square(1.01 - Math.Min(1.01, sink.Fill)) * step * profile.WaterChokeGain);
 			amount = Math.Min(amount, sink.Room);

@@ -152,6 +152,14 @@ Details used by WS2 (2026.1):
 - `DoUpdate` is registered in `Start` only when both compartments exist, and removed only in `OnDestroy`,
   so it keeps running while the hatch is disabled. Vanilla moves **no** air through horizontal hatches;
   only the vertical passage exchanges air.
+- Vanilla open horizontal hatch, water: each side offers `min(W, s × max(0, WE - sillY), W × sillY / WE)`
+  (only while it holds water above the sill), with `s = min(8, game dt × k)`, `k = 2`, damped to
+  `2 / sqrt(S)` above 1x (S = Unity time scale × ArtificialTimeScale). The net (left offer minus right
+  offer) moves, clamped to the receiver's room. So at 1x it moves 2 m3/s per metre of level difference,
+  ignoring air pressure. Vertical passage: air `(pL - pR) × s × 0.2`; water drains down at `0.15 × s`
+  while the lower side is under 99.5 % full, and anything above 99.5 % is pushed up at once.
+  WS2 matches the horizontal water rate, including under time compression via 0.5 s substeps
+  (WS2-API §2).
 - `CanBeOpened` (vanilla): `!pressureBlockade` → true; with a blockade compartment, false only when it
   holds more than 1 m of water and its `FluidsPressure` exceeds 9; without one, on a ship, true iff
   `TargetDepth < 2` and `DeckDepth < 2.5`. Read by `HatchOpenCloseAction.GetState`, which disables Open
