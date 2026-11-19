@@ -308,6 +308,54 @@ than the xlsx's.
     hatch's lowY is near the top of the tower; this is the C12 replacement for 101.55 m and 102.8 m.
     A `boat layout unknown:` line means the dependent features stay off; report it.
 
+### WS1: pressure and air
+
+Most of these need a damaged boat. A sandbox or test campaign with a few hull hits is enough; set
+`General/Settings/Damage Control/Debug` to True to also get `pressure layout:` in the log, which names
+the conning-tower, diesel and galley compartments the features below act on. A
+`conning tower compartment not found` or `diesel compartment not found` warning means that part is off;
+report it.
+
+- **P1 breach air floor.** Let a compartment flood through a hull breach until it is full. Its bilge
+  panel's air-pressure line (P13) never drops to 0.00 atm, and the water never fills the last of the
+  volume with no air left. No pressure spikes to absurd values (thousands of atm) on the panel.
+- **P2 unbreathable air.** In a compartment that floods past about 1.5 m above the floor, crew start
+  choking (the game's toxic-air alert shows) and recover after the water drops below it. A compartment
+  at normal 1 atm with oxygen above 5 % never shows the alert, even at 4 to 8 atm (vanilla 2026.1 would
+  have flagged those). Choking injuries are rare (about 1 in 20 checks for a sailor), not constant.
+- **P3 rebreathers.** Note how long a rebreather lasts in vanilla (mod disabled), then with the mod: it
+  lasts about 2.5 times as long. Its durability bar drains visibly slower while worn. Taking it off and
+  on again does not stack the bonus (the drain rate stays the same).
+- **P4 hatch pressure reading / P6 hatch stress.** With two neighbouring compartments at clearly
+  different air pressure and the hatch between them closed, the hatch eventually shows the game's
+  pressure-damage status and takes water damage, even with dry floors. With equal pressure it never does.
+- **P6 compartment tick.**
+  - 01 §6 #25: flood a compartment deeply at depth (high pressure). Its light bulbs and the
+    pressure-sensitive equipment under water accumulate water damage over minutes and show the
+    pressure-damage status; once the compartment is pumped dry and the pressure is normal the status
+    disappears, and it comes back if the compartment floods again (vanilla could not re-attach it).
+  - A crewman's slot near a bulkhead counts as underwater (needs a rebreather) when the compartment on
+    the other side of the bulkhead floods past the slot's tolerance, even if his own room is dry.
+  - The log has no `patch CompartmentTick threw` line.
+- **P7 slot tuning.** Hatch and bulkhead slots stay usable until about 1.4 m of water; dive-plane
+  stations stop at about 0.7 m and the electric engines at about 0.6 m. Watch a crewman open and pass
+  the control-room to conning-tower hatch and an ordinary bulkhead hatch: the animations must look
+  right. If they look wrong, set `General/Settings/Damage Control/Hatch Slot Interaction Types` to False
+  (tolerances still apply) and report it.
+- **P9 venting and diesel draw (01 §6 #24).** Dive to 20 m with no snorkel and force the diesel on if
+  the game allows it, or run it on the surface and dive: the engine room's bilge panel pressure falls
+  toward 0.35 atm and stops there. Surface (deck depth under 3.5 m): it returns to about 1.00 atm within
+  a few seconds. Open the exterior hatch on the surface: the conning tower goes to 1.00 atm at once. With
+  a working snorkel raised at snorkel depth the engine room stays near 1 atm.
+- **P10 compressor.** Run the air compressor for a while: its compartment's pressure slowly drops. In a
+  compartment at or below 0.35 atm the compressor no longer fills the tanks.
+- **P12b buoyancy tooltip.** Hover the buoyancy indicator: below the vanilla text come the ballast total,
+  one line per ballast/quick-diving tank (water and % of capacity, names readable), the total water in
+  the hull, and one line per compartment, each counted once. A compartment with 5 m³ or more (the galley
+  with 2 m³ or more) is red. Values change as tanks flood and blow.
+- **P13 bilge pressure.** Hover any compartment's bilges (the "water" panel): the last line gives the
+  compartment's air pressure in atm with two decimals, also when the bilges are dry.
+
 ### Per feature
 
 13. For each new feature: exercise it, then save, quit, reload and confirm its state persists.

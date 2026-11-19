@@ -75,6 +75,28 @@ handles the air-toxicity toggle.
 `CompartmentPressure` (`Items/CompartmentPressure.cs`): `Elevation`, `Target` (Equipment),
 `Pressure`, `IsUnderWater`, `IsBeingDamaged`. `PressureDamage` is an `EquipmentStatus`.
 
+Pressure-area findings (WS1):
+
+- `CompartmentPressure.Elevation` is metres above the compartment **floor** (vanilla compares it with
+  `WaterElevationAboveFloor`), but the `Pressure` and `IsUnderWater` getters compare it with the
+  absolute `WaterElevation` (~100), so in practice they always return the compartment's
+  `FluidsPressure`. The mod keeps that for non-hatch points (00 §4) and only changes interior-hatch points.
+- The `IsBeingDamaged` setter never clears its private `pressureDamage` field on `false`, so after one
+  detach a point can never re-attach the status. The P6 tick writes the field itself
+  (`Game/Pressure/CompartmentTickPatch`, `PressureDamageStatus`).
+- Private fields used: `Compartment.mergedCompartment`, `oxygen` (`Resource`), `pressurizedEquipment`,
+  `interactableSlots`, `devices`; `InteractableSlot.waterElevationToleration` (float) and
+  `interactionType` (a plain **int** fed to the animator's `interaction_type`, not an enum);
+  `AirCompressor.tanks`, `oxygenCompression` (`Parameter`), `maxPressure`; `Rebreather.durability`
+  (`Parameter`, wear is counted only while worn, from `OnEquipped`).
+- Slots register in `Compartment.Awake` (`AddInteractableSlot`), before `[Inject]` gameplay singletons
+  may be set, so P7 resolves the ship through `GetComponentInParent<PlayerShip>()`; its
+  `HatchToConningTower` and `ElectricEngine` are serialized fields.
+- Bilges are plain `Storage` objects whose name contains "Water", parented under their compartment;
+  vanilla `Storage.GetStateText` itself picks them out that way. The galley is the compartment holding
+  the `Kitchen` (a `Storage`). Compartment and tank names localize as `Activators/<Equipment.Name>`.
+- `Rebreather.Awake` is 19 bytes of IL (inlining risk); patch `OnEquipped` instead.
+
 ### 1.3 `ExternalPressure` - `UBOAT.Game.Scene.Items.ExternalPressure` (`Items/ExternalPressure.cs`)
 
 A hole/vent to the sea attached to a tank. `HoleSize`, `float Openess {get;set;}`,
