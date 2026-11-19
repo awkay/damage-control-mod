@@ -45,6 +45,16 @@ namespace DamageControl.Core.Common
 			return new HatchGeometry(low, low + height);
 		}
 
+		/// <summary>
+		/// The 02 convention exactly: lowY is the hatch's lowest-point marker (the sill the game's own water
+		/// transfer uses) and highY = lowY + collider height x vertical scale. Preferred over
+		/// <see cref="FromBoxCollider"/> when the hatch has that marker.
+		/// </summary>
+		public static HatchGeometry FromLowestPoint(float lowestPointY, float sizeY, float scaleY)
+		{
+			return new HatchGeometry(lowestPointY, lowestPointY + Math.Abs(sizeY * scaleY));
+		}
+
 		public override string ToString()
 		{
 			return "HatchGeometry(lowY=" + LowY + ", highY=" + HighY + ")";

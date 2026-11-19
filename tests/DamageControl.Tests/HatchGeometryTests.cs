@@ -26,6 +26,17 @@ namespace DamageControl.Tests
         }
 
         [Fact]
+        public void FromLowestPointUsesTheMarkerAsLowYAndColliderHeightAboveIt()
+        {
+            // 02 conventions: lowY = lowest point, highY = lowY + collider height x vertical scale.
+            HatchGeometry g = HatchGeometry.FromLowestPoint(99.8f, 1.5f, -1.2f);
+            Assert.Equal(99.8f, g.LowY, 4);
+            Assert.Equal(101.6f, g.HighY, 4);
+            Assert.True(g.IsValid);
+            Assert.False(HatchGeometry.FromLowestPoint(99.8f, 0f, 1f).IsValid);
+        }
+
+        [Fact]
         public void DegenerateOrNonFiniteIsInvalid()
         {
             Assert.False(HatchGeometry.FromBoxCollider(100f, 0f, 0f, 1f).IsValid);

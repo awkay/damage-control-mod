@@ -356,6 +356,59 @@ report it.
 - **P13 bilge pressure.** Hover any compartment's bilges (the "water" panel): the last line gives the
   compartment's air pressure in atm with two decimals, also when the bilges are dry.
 
+### WS2: hatches
+
+Turn on `General/Settings/Damage Control/Debug` for these: the hatch panel then shows `[DC]` lines with
+lowY/highY, the seal count and both compartments' capacity, water, air, pressure and water elevation.
+Under D1 water alone needs about 9 m of head difference to lock a hatch; to provoke a lock quickly, set
+`Hatch Lock Threshold` to `0.05` (delete the parsed-sheet cache afterwards, see above). No
+`patch Hatch... threw and falls back to vanilla behaviour` line may appear in the log.
+
+H1. **Pressure lock (02 §6 #23).** Enable hatch pressure blocking on the Workshop. Flood the bow torpedo
+    room (or lower the threshold), close its aft hatch, and look at it: the panel starts with the red "held
+    shut" line, Open is disabled with vanilla's pressure warning, and ordering a crewman through it fails
+    (WS4 handles the path). Disable blocking: Open is offered again and works.
+H2. **Lock guard.** While H1 holds, try every way to open that hatch: wheel, first-person toggle, crew
+    walking through it. It stays shut and nothing throws. The exterior hatch, the toilet door and the cargo
+    hatch behave exactly as without the mod, with blocking on or off.
+H3. **Repair hold (C10).** With blocking **off**, order a repair on a damaged closed interior hatch. While
+    the repair status shows, Open is disabled; after the repair it opens normally.
+H4. **Open-hatch exchange (02 §6 #24).** Open a hatch between a flooded and a dry room. Water levels move
+    toward each other, the jet particles play on the receiving side only, and they stop at equilibrium.
+    Note how fast it is: per D1, head-driven flow is a tenth of the 2022.1 original's. If it feels too slow,
+    tune `Hatch Flow Rate` (default 2) and record the value.
+H5. **Air through open hatches.** With debug lines on, open a hatch between rooms at different air
+    pressures (e.g. the diesel room after a submerged diesel run, WS1): both `p` values converge within a
+    few seconds without oscillating.
+H6. **Conning tower (vertical passage).** Water poured into the tower drains down into the control room;
+    with the control room flooded above the tower opening and higher pressure below, water rises into the
+    tower. No jet particles at that hatch.
+H7. **Destroyed closed hatch (02 §6 #25, hatch part).** Destroy a closed interior hatch (debug tools or
+    combat). It gains the Leaking status, leaks slowly (about 2 % of the open rate), and its panel shows the
+    red "wrecked" line instead of the durability line. Repairing any health stops the leak. After WS3/WS5:
+    a blocker or a repairer at the hatch adds exactly one green "partly sealed" line and visibly slows the
+    leak; opening the hatch cancels the blocker.
+H8. **Blow-open (H5).** A destroyed closed hatch whose far side's air pressure exceeds its seat side's by
+    more than a third of its design pressure blows open within a few seconds, with the "Pressure Damage"
+    sound. Never while it is intact or being repaired.
+H9. **Panel (H6).** Interior hatch panel: opening-side and closing-side pressures with two decimals, red
+    above 2 atm, blue below 0.8 atm; blank line; durability. In first person, looking at a hatch into an
+    evacuated compartment adds vanilla's evacuation line. The exterior hatch keeps vanilla's external
+    pressure line. No `[DC]` lines with debug off.
+H10. **Equalize (01 §6 #18).** With blocking on and a hatch held shut by pressure, the wheel on that
+    hatch offers "Equalize pressure" (also with no crewman selected). The crewman walks to the hatch's
+    default slot, works it, the two side pressures in the panel converge, the hatch opens by itself once it
+    may, and the order clears about 2.3 s later. It is not offered on open hatches, the exterior hatch or
+    doors. Check the working animation looks right and that the order never completes on its own before
+    the hatch opens.
+H11. **Occlusion (02 §6 #31).** Walk the boat bow to stern with hatches open and closed, in first person
+    and in the cut-away view: no rooms popping in or out compared with the mod disabled.
+H12. **Disabled hatch (H3).** If a hatch gets disabled during play while closed with higher pressure on
+    its seat side, it stays shut and gains the Leaking status (log line with debug on). Hard to provoke on
+    purpose; note it if seen.
+H13. **Save/load.** Save with a hatch held shut and another leaking; reload. Lock state, leak status and
+    panel are the same; seals are re-established by the working crewmen (WS3/WS5).
+
 ### Per feature
 
 13. For each new feature: exercise it, then save, quit, reload and confirm its state persists.
