@@ -1,0 +1,11 @@
+bin/
+obj/
+build/out/
+build/generated/
+*.user
+.vs/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+TestResults/

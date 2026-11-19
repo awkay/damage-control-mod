@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compiles mod/Source/**/*.cs like the game's mod loader does, for IDEs and fast feedback.
+    References, LangVersion, defines, warning level and unsafe come from
+    build/generated/GameCompile.props, which `PatchVerifier refs` generates from the game's
+    loader model and its RoslynCSharpSettings asset (./verify does this first).
+
+    No implicit framework: no NETStandard.Library, no SDK mscorlib; only the game's own
+    mscorlib/System/... from the Managed folder (UboatManaged, see Directory.Build.props).
+
+    The authoritative compile is `PatchVerifier compile` (the game's exact Roslyn 2.10);
+    this project uses the SDK's newer compiler restricted to the same language version.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <NoStdLib>true</NoStdLib>
+    <NoCompilerStandardLib>true</NoCompilerStandardLib>
+    <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <Deterministic>true</Deterministic>
+    <DebugType>none</DebugType>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- CS1701/CS1702: mscorlib 2.0/4.0 unification noise from Unity assemblies (also benign in game). -->
+    <NoWarn>CS1701;CS1702</NoWarn>
+    <OutputPath>$(MSBuildThisFileDirectory)out/msbuild/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <Import Project="generated/GameCompile.props" Condition="Exists('generated/GameCompile.props')" />
+
+  <ItemGroup>
+    <Compile Include="../mod/Source/**/*.cs" />
+  </ItemGroup>
+
+  <Target Name="RequireGeneratedProps" BeforeTargets="ResolveAssemblyReferences;CoreCompile">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)generated/GameCompile.props')"
+           Text="build/generated/GameCompile.props is missing. Run ./verify (or: dotnet tools/PatchVerifier/bin/Release/net11.0/PatchVerifier.dll refs --mod mod)." />
+  </Target>
+</Project>

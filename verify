@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Offline build + verification for the Damage Control mod. Plain output, no colors.
+# Steps: build verifier, generate compile props, MSBuild compile, game-exact compile + verify,
+# unit tests. Exits non-zero if any step fails. Game path: UBOAT_MANAGED=/path/to/UBOAT_Data/Managed
+set -u
+cd "$(dirname "$0")"
+
+export NO_COLOR=1 TERM=dumb DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION=0 MSBUILDTERMINALLOGGER=off
+MSB="-nologo -tl:off -clp:DisableConsoleColor -v:minimal"
+VERIFIER="tools/PatchVerifier/bin/Release/net11.0/PatchVerifier.dll"
+GAME_DLL="build/out/game/damage-control.dll"
+
+failed=()
+step() {
+  local name="$1"; shift
+  echo
+  echo "######## $name"
+  if "$@"; then
+    echo "######## $name: PASS"
+  else
+    echo "######## $name: FAIL"
+    failed+=("$name")
+  fi
+}
+
+step "build verifier" dotnet build tools/PatchVerifier -c Release $MSB
+if [ ${#failed[@]} -eq 0 ]; then
+  step "generate compile props" dotnet "$VERIFIER" refs --mod mod --props build/generated/GameCompile.props
+  step "msbuild compile (build/ModCompile.csproj)" dotnet build build/ModCompile.csproj $MSB
+  step "game-exact compile + verify" dotnet "$VERIFIER" all --mod mod --out "$GAME_DLL"
+fi
+step "unit tests" dotnet test tests/DamageControl.Tests $MSB
+
+echo
+if [ ${#failed[@]} -eq 0 ]; then
+  echo "VERIFY: PASS"
+  exit 0
+fi
+echo "VERIFY: FAIL (${failed[*]})"
+exit 1

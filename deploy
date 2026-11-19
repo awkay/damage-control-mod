@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Copies mod/ into the game's LOCAL mods folder inside the CrossOver bottle.
+# Does not touch the game install, modlist.txt or the compiled-assembly cache.
+#
+#   ./deploy [--no-verify]
+#
+# Loader facts (UBOAT.Game.Core.Mods.ModManager, 2026.1):
+#   local mods   = <persistentDataPath>/Mods/<folder>/   (mod id = folder name)
+#   enabled mods = lines of <persistentDataPath>/modlist.txt (local: "<folder>", Workshop: "steam:<id>")
+#   persistentDataPath under CrossOver = .../drive_c/users/crossover/AppData/LocalLow/Deep Water Studio/UBOAT
+set -eu
+cd "$(dirname "$0")"
+
+MOD_ID="${MOD_ID:-damage-control}"
+BOTTLE="${CROSSOVER_BOTTLE:-$HOME/Library/Application Support/CrossOver/Bottles/Steam}"
+PERSISTENT="$BOTTLE/drive_c/users/crossover/AppData/LocalLow/Deep Water Studio/UBOAT"
+TARGET="$PERSISTENT/Mods/$MOD_ID"
+
+if [ "${1:-}" != "--no-verify" ]; then
+  ./verify || { echo "deploy: ./verify failed, not deploying (use --no-verify to override)"; exit 1; }
+fi
+
+if [ ! -d "$PERSISTENT" ]; then
+  echo "deploy: game data folder not found: $PERSISTENT"
+  echo "deploy: run the game once in the bottle, or set CROSSOVER_BOTTLE"
+  exit 1
+fi
+
+mkdir -p "$TARGET"
+# --checksum without -t: unchanged files keep their mtime, changed files get "now", so the
+# loader's mtime-based recompile check (sources newer than Temp/<assemblyName>.dll) fires.
+rsync -r --checksum --delete --exclude '.*' mod/ "$TARGET/"
+echo "deploy: copied mod/ -> $TARGET"
+
+if grep -qxF "$MOD_ID" "$PERSISTENT/modlist.txt" 2>/dev/null; then
+  echo "deploy: $MOD_ID is already enabled in modlist.txt"
+else
+  echo "deploy: NOT enabled yet. Enable \"Damage Control\" in the launcher's Mods tab"
+  echo "deploy: (equivalent: a line \"$MOD_ID\" in $PERSISTENT/modlist.txt)"
+fi
+echo "deploy: compiled cache: $PERSISTENT/Temp/damage-control.dll (rebuilt by the game when sources are newer)"
+echo "deploy: game log: $PERSISTENT/output_log.txt"

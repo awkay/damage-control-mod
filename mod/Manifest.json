@@ -1,0 +1,9 @@
+{
+	"name": "Damage Control",
+	"version": "0.1.0",
+	"description": "Reworked flooding, pressure and damage control. (Work in progress.)",
+	"author": "",
+	"supportedGameVersions": [ "2026.1" ],
+	"assemblyName": "damage-control",
+	"permissions": [ "Reflection" ]
+}

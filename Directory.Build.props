@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    Game managed-assembly folder. Override with an environment variable
+    (UBOAT_MANAGED=/path/to/UBOAT_Data/Managed) or on the command line
+    (dotnet build -p:UboatManaged=/path/to/Managed).
+  -->
+  <PropertyGroup>
+    <UboatManaged Condition="'$(UboatManaged)' == '' and '$(UBOAT_MANAGED)' != ''">$(UBOAT_MANAGED)</UboatManaged>
+    <UboatManaged Condition="'$(UboatManaged)' == ''">/Volumes/Games/SteamLibrary/steamapps/common/UBOAT/UBOAT_Data/Managed</UboatManaged>
+    <UboatManaged>$([MSBuild]::EnsureTrailingSlash('$(UboatManaged)'))</UboatManaged>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+  </PropertyGroup>
+</Project>
