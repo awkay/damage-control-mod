@@ -32,7 +32,7 @@ mkdir -p "$TARGET"
 rsync -r --checksum --delete --exclude '.*' mod/ "$TARGET/"
 echo "deploy: copied mod/ -> $TARGET"
 
-if grep -qxF "$MOD_ID" "$PERSISTENT/modlist.txt" 2>/dev/null; then
+if tr -d '\r' < "$PERSISTENT/modlist.txt" 2>/dev/null | grep -qxF "$MOD_ID"; then
   echo "deploy: $MOD_ID is already enabled in modlist.txt"
 else
   echo "deploy: NOT enabled yet. Enable \"Damage Control\" in the launcher's Mods tab"
