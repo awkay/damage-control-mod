@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using DamageControl.Core.Common;
+using DamageControl.Core.Leaks;
 using DamageControl.Core.Repair;
 using DamageControl.Game.Infrastructure;
+using DamageControl.Game.Leaks;
 using HarmonyLib;
 using UBOAT.Game.Core;
 using UBOAT.Game.Scene.Characters;
@@ -18,7 +20,8 @@ namespace DamageControl.Game.Repair
 	/// R1 availability (04 §2.1.2): vanilla offers the repair only while a <c>Repair</c> or <c>Default</c> slot
 	/// is usable. When vanilla disabled it for that reason alone and a <c>Block Leak</c> slot is usable, the
 	/// repair is offered after all, with vanilla's "a part will be used" note when one will. Every other
-	/// vanilla verdict stands.
+	/// vanilla verdict stands. On a shared leak target (P8, WS3) the repair is then greyed out while two others
+	/// already work there.
 	/// </summary>
 	[HarmonyPatch(typeof(RepairAction), "GetState", new Type[] { typeof(GameActivator), typeof(PlayableCharacter), typeof(bool), typeof(bool), typeof(ActionContext) })]
 	internal static class RepairStatePatch
@@ -32,29 +35,60 @@ namespace DamageControl.Game.Repair
 		{
 			try
 			{
-				if (__result.ActionState != ActionState.Disabled || activator == null)
+				if (activator == null)
 					return;
-				Equipment equipment = activator.AssociatedEquipment;
-				Interactable interactable = equipment != null ? equipment.GetComponent<Interactable>() : null;
-				if (interactable == null || !interactable.HasSlots(RepairText.SlotBlockLeak))
-					return;
-				if (!MeetsSoftRequirements(__instance, character))
-					return;
-				bool blocking = character != null && (character.Item is IInteractionsBlockingItem || character.Backpack.Item is IInteractionsBlockingItem);
-				bool otherRepairing = OtherCrewmanRepairing(activator, character);
-				bool partMissing = RepairRuntime.PartRequiredButMissing(equipment, character);
-				bool repairSlot = RepairSlotProbe.Check(interactable, RepairText.SlotRepair, RepairText.SlotDefault, character, false, isPlayerOrder).ActionState > ActionState.Disabled;
-				ActionStateData leakSlot = RepairSlotProbe.Check(interactable, RepairText.SlotBlockLeak, character, fillDetails, isPlayerOrder);
-				if (!RepairSlots.OfferThroughBlockLeakSlot(true, blocking, otherRepairing, partMissing, repairSlot, leakSlot.ActionState > ActionState.Disabled))
-					return;
-				if (fillDetails && leakSlot.Warning == null && equipment.Health == 0f && equipment.Data != null && equipment.Data.RepairConsumesParts)
-					leakSlot.Warning = new LocalizedString(RepairText.ReplacementPartsInfo);
-				__result = leakSlot;
+				OfferThroughBlockLeakSlot(__instance, activator, character, fillDetails, isPlayerOrder, ref __result);
+				CapSharedLeak(activator, character, fillDetails, ref __result);
 			}
 			catch (Exception e)
 			{
 				DcLog.PatchFailed("RepairState", e);
 			}
+		}
+
+		/// <summary>
+		/// P8 (WS3): on a shared leak target the repair is greyed out while two other crewmen already block or
+		/// repair there, so no third man joins (vanilla's crowding cancel would then throw a blocker off).
+		/// </summary>
+		private static void CapSharedLeak(GameActivator activator, PlayableCharacter character, bool fillDetails, ref ActionStateData result)
+		{
+			if (result.ActionState <= ActionState.Disabled)
+				return;
+			Equipment equipment = activator.AssociatedEquipment;
+			Interactable interactable = equipment != null ? equipment.GetComponent<Interactable>() : null;
+			if (!SlotCrowdingRuntime.IsShared(interactable))
+				return;
+			int blockers;
+			int repairers;
+			SlotCrowdingRuntime.CountWorkers(activator.Users, character, out blockers, out repairers);
+			if (SlotCrowding.AdmitsAnother(blockers + repairers))
+				return;
+			result = new ActionStateData(ActionState.Disabled, fillDetails ? new LocalizedString(UsedBySomebodyElse) : null);
+		}
+
+		/// <summary>Vanilla's "used by somebody else" warning (also shown by the block-leak order).</summary>
+		private const string UsedBySomebodyElse = "Activators/Used by Somebody Else Warning";
+
+		private static void OfferThroughBlockLeakSlot(RepairAction action, GameActivator activator, PlayableCharacter character, bool fillDetails, bool isPlayerOrder, ref ActionStateData result)
+		{
+			if (result.ActionState != ActionState.Disabled)
+				return;
+			Equipment equipment = activator.AssociatedEquipment;
+			Interactable interactable = equipment != null ? equipment.GetComponent<Interactable>() : null;
+			if (interactable == null || !interactable.HasSlots(RepairText.SlotBlockLeak))
+				return;
+			if (!MeetsSoftRequirements(action, character))
+				return;
+			bool blocking = character != null && (character.Item is IInteractionsBlockingItem || character.Backpack.Item is IInteractionsBlockingItem);
+			bool otherRepairing = OtherCrewmanRepairing(activator, character);
+			bool partMissing = RepairRuntime.PartRequiredButMissing(equipment, character);
+			bool repairSlot = RepairSlotProbe.Check(interactable, RepairText.SlotRepair, RepairText.SlotDefault, character, false, isPlayerOrder).ActionState > ActionState.Disabled;
+			ActionStateData leakSlot = RepairSlotProbe.Check(interactable, RepairText.SlotBlockLeak, character, fillDetails, isPlayerOrder);
+			if (!RepairSlots.OfferThroughBlockLeakSlot(true, blocking, otherRepairing, partMissing, repairSlot, leakSlot.ActionState > ActionState.Disabled))
+				return;
+			if (fillDetails && leakSlot.Warning == null && equipment.Health == 0f && equipment.Data != null && equipment.Data.RepairConsumesParts)
+				leakSlot.Warning = new LocalizedString(RepairText.ReplacementPartsInfo);
+			result = leakSlot;
 		}
 
 		private static bool OtherCrewmanRepairing(GameActivator activator, PlayableCharacter character)

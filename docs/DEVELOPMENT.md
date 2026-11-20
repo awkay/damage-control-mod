@@ -348,14 +348,19 @@ Under D1, water alone needs about 9 m of head difference to lock a hatch. To pro
 ### Stage 4: leaks and repair on shared targets (WS3, WS5)
 
 These targets are where WS3's two-seat crowding meets WS5's repair. Patch ids: `BlockLeakUpdate`,
-`BlockLeakStop`, `BlockLeakState`, `SlotCrowding`, `RepairSlot`, `RepairState`, `RepairUpdate`,
+`BlockLeakStop`, `BlockLeakState`, `BlockLeakStart`, `SlotCrowding`, `RepairSlot`, `RepairState`, `RepairUpdate`,
 `RepairStop`.
 
 | # | Setup | Action | Expected | Grep |
 |---|---|---|---|---|
 | 4.1 block a wrecked hatch (C28) | 3.6 | Order "Block leak" on it | The crewman takes the repair pose at the default slot. Exactly one green "partly sealed" line appears and the leak slows. Cancel the order and the line goes. Open the hatch while he blocks: his order cancels about 2.3 s later and "Block leak" is no longer offered. | no `InvalidCastException` from `BlockLeakAction`; `block leak: ... released a hatch seal` |
-| 4.2 blocker plus repairer (P8) | A wrecked hatch, a leaking pipe, a hull hole | Order one crewman to block and another to repair each | Both work at once; neither cancels the other | `slot crowding: "..." (...) now takes 2 characters` once per target |
-| 4.3 blocker leaves mid-repair (WS7 fix) | 4.2 on the wrecked hatch, with blocking **off** | Cancel the blocker while the repairer keeps working | The hatch still shows the repair status. Open stays disabled until the repair ends (C10 hold). | `block leak: kept the running repair's status on "..."` |
+| 4.2a blocker then repairer (P8) | Debug on. A hull hole, a leaking pipe and a wrecked hatch, each with one crewman blocking (a self-dispatched sailor counts). Replacement parts aboard. | Select an engineer officer, open the wheel on the same object, choose **Repair** | Repair is offered (not greyed out). He walks to the other station and repairs while the blocker stays. Neither cancels within a minute. | `slot crowding: "..." (...) now takes 2 characters; slots: ...` once per target (note the slot names for each kind) |
+| 4.2b repairer then blocker (P8) | Same targets, an officer repairing each, nobody blocking | Select another officer (or nobody), choose **Block leak** on the same object | The repairer keeps repairing; the blocker takes the other station | no `block leak: ... joins` line (nobody to keep); the repairer is not stopped |
+| 4.2c two blockers (P8) | 4.2a setup with one blocker on a hull hole and on a pipe | Select a second officer, choose **Block leak** on the same object | Both block at once (the second at the `Repair` station on a hole or pipe without a free `Block Leak` slot). The leak drops further than with one. | `block leak: <second> joins <first> on "..."` |
+| 4.2d never three (P8) | 4.2c holding (two blockers) | Open the wheel with a third officer: try **Repair**, then **Block leak** | Repair is greyed out, "used by somebody else". Block leak is offered; using it sends one of the two blockers away, leaving two. | - |
+| 4.2e no free station | A hatch with one blocker, where the second station is flooded or unreachable | Order **Block leak** with a second officer without a rebreather | Flooded free station and no rebreather: he takes over from the first man (vanilla). Dry but unreachable free station: the first man keeps blocking and the second gives up. Note the hatch's slot names from the 4.2a log line. | - |
+| 4.2f vanilla elsewhere | An intact pipe or hatch, and a manned device (e.g. a compressor) | Use them normally; repair a damaged non-leaking device | Exactly as without the mod: no `slot crowding` line for non-leaking targets | - |
+| 4.3 blocker leaves mid-repair (WS7 fix) | 4.2a on the wrecked hatch, with blocking **off** | Cancel the blocker while the repairer keeps working | The hatch still shows the repair status. Open stays disabled until the repair ends (C10 hold). | `block leak: kept the running repair's status on "..."` |
 | 4.4 hull hole (02 §6 #26) | A hull hole | A man holds the block-leak pose, then leaves | The leak drops about 80 % and returns when he leaves | - |
 | 4.5 repair slot fallback (R1) | A pipe or hole with a `Block Leak` slot; someone in the `Repair` slot | Order an engineer to repair | He goes to the free `Block Leak` (or `Default`) slot. The wheel offers the repair instead of disabling it. The animation looks right. | - |
 | 4.6 leak throttle (R2) | A leaking pipe | Repair it; pull the repairer off halfway | The leak slows as the bar fills and returns to full when he leaves. Repairing a non-leaking device does nothing to leaks. | - |
