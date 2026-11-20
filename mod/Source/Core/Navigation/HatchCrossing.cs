@@ -15,7 +15,7 @@ namespace DamageControl.Core.Navigation
 		/// <summary>Compartment on the higher-Z ("right") side.</summary>
 		public int RightCompartment;
 
-		/// <summary>Closed and cannot be opened (see <see cref="HatchCrossing.IsBlocked"/>).</summary>
+		/// <summary>Held shut by Damage Control (see <see cref="HatchCrossing.HoldOf"/>).</summary>
 		public bool Blocked;
 
 		public CrossingHatch(float obstacleZ, int leftCompartment, int rightCompartment, bool blocked)
@@ -25,6 +25,54 @@ namespace DamageControl.Core.Navigation
 			RightCompartment = rightCompartment;
 			Blocked = blocked;
 		}
+	}
+
+	/// <summary>Why Damage Control is holding a hatch shut (B9, B10). Vanilla's own lock rules never count.</summary>
+	public enum HatchHold
+	{
+		/// <summary>Not held by the mod: open, exterior, compartment-less, or closed only by vanilla's rules.</summary>
+		None,
+
+		/// <summary>A repair is under way and shows its status (02 C10, the R3 repair hold; applies with P14 off too).</summary>
+		RepairHold,
+
+		/// <summary>The pressure lock (H1) while hatch pressure blocking (P14) is on.</summary>
+		PressureLock
+	}
+
+	/// <summary>One hatch's state as the hold rule reads it, as plain values.</summary>
+	public struct HatchHoldState
+	{
+		/// <summary>The hatch is closed.</summary>
+		public bool Locked;
+
+		/// <summary>The exterior (bridge) hatch: never held by the mod (C11).</summary>
+		public bool IsExterior;
+
+		/// <summary>The hatch has a left, right or pressure-blockade compartment; doors and the cargo hatch do not.</summary>
+		public bool HasCompartments;
+
+		/// <summary>The hatch shows a visible "is being repaired" status.</summary>
+		public bool RepairHeld;
+
+		/// <summary>The P14 setting (hatch pressure blocking).</summary>
+		public bool PressureBlockingEnabled;
+
+		/// <summary>The (patched) "can be opened" answer.</summary>
+		public bool CanBeOpened;
+	}
+
+	/// <summary>The crewman starting through a hatch link, as the B10 exemptions read him.</summary>
+	public struct TraverserState
+	{
+		/// <summary>He is carrying out an evacuate-to-safety order.</summary>
+		public bool Evacuating;
+
+		/// <summary>He is getting off the deck or bridge because the boat goes under (escape-danger or hide-in-ship behaviour).</summary>
+		public bool LeavingDeckForDive;
+
+		/// <summary>He was already on this link's queue when the traverse started again (mid-climb).</summary>
+		public bool AlreadyTraversing;
 	}
 
 	/// <summary>Where a walk starts and where it wants to go, in the boat's interior coordinates.</summary>
@@ -47,9 +95,9 @@ namespace DamageControl.Core.Navigation
 	}
 
 	/// <summary>
-	/// B9, B10 (03 §2.F, 00 C26): crew navigation against hatches that cannot be opened. Vanilla
-	/// reachability already refuses evacuated compartments (non-player orders); this adds the
-	/// "cannot be opened" test, which applies to player orders too. Positions follow the game: hatches are
+	/// B9, B10 (03 §2.F, 00 C26, C33): crew navigation against hatches Damage Control holds shut. Vanilla
+	/// reachability already refuses evacuated compartments (non-player orders); this adds the mod's hold
+	/// (<see cref="HoldOf"/>), which applies to player orders too. Positions follow the game: hatches are
 	/// listed left to right (increasing obstacle Z); a destination at or above the conning-tower level counts
 	/// as Z = 0 (the tower sits over the control room).
 	/// </summary>
@@ -58,19 +106,46 @@ namespace DamageControl.Core.Navigation
 		/// <summary>Compartment id meaning "no compartment" (game instance ids may be negative, so not -1).</summary>
 		public const int NoCompartment = int.MinValue;
 
-		/// <summary>A hatch stops crew when it is closed and cannot be opened. An open hatch is passable.</summary>
-		public static bool IsBlocked(bool locked, bool canBeOpened)
+		/// <summary>
+		/// Whether, and why, Damage Control itself is holding a hatch shut: the same hatches the lock guard
+		/// (H2) refuses to open. A closed interior hatch with compartments is held while it is under repair,
+		/// or while P14 is on and it cannot be opened. Vanilla's own rules (the deck-depth rule for hatches
+		/// without a blockade compartment, the flooded-blockade rule with P14 off) never count: vanilla opens
+		/// those hatches on traverse, so treating them as blocked would strand crew (for example on a dive).
+		/// </summary>
+		public static HatchHold HoldOf(HatchHoldState hatch)
 		{
-			return locked && !canBeOpened;
+			if (!hatch.Locked || hatch.IsExterior || !hatch.HasCompartments)
+				return HatchHold.None;
+			if (hatch.RepairHeld)
+				return HatchHold.RepairHold;
+			if (hatch.PressureBlockingEnabled && !hatch.CanBeOpened)
+				return HatchHold.PressureLock;
+			return HatchHold.None;
 		}
 
 		/// <summary>
-		/// B10: whether a character starting to traverse a hatch link has its orders cancelled. The exterior
-		/// hatch is exempt (03 §2.F: the ladder to the bridge has no openability test).
+		/// B10: whether a crewman starting through a hatch link has his orders cancelled. Only a hatch the mod
+		/// holds shut counts, and never for a man who is evacuating, leaving the deck because the boat dives,
+		/// or already part way through that link.
 		/// </summary>
-		public static bool ShouldCancelTraverse(bool hasHatch, bool isExteriorHatch, bool locked, bool canBeOpened)
+		public static bool ShouldCancelTraverse(HatchHold hold, TraverserState who)
 		{
-			return hasHatch && !isExteriorHatch && IsBlocked(locked, canBeOpened);
+			return hold != HatchHold.None && !who.Evacuating && !who.LeavingDeckForDive && !who.AlreadyTraversing;
+		}
+
+		/// <summary>Short reason text for the debug log.</summary>
+		public static string Describe(HatchHold hold)
+		{
+			switch (hold)
+			{
+				case HatchHold.RepairHold:
+					return "held shut for a repair";
+				case HatchHold.PressureLock:
+					return "pressure-locked (hatch pressure blocking on)";
+				default:
+					return "not held";
+			}
 		}
 
 		/// <summary>The postfix may only turn "reachable" into "unreachable", never the reverse (00 C26).</summary>
@@ -173,7 +248,7 @@ namespace DamageControl.Core.Navigation
 
 		/// <summary>
 		/// B9 decision with every hatch's state known up front: unreachable when a crossed interior hatch is
-		/// blocked, or the walk crosses the conning-tower level while that hatch is blocked (03 §6 #24).
+		/// held shut by the mod, or the walk crosses the conning-tower level while that hatch is (03 §6 #24).
 		/// </summary>
 		public static bool IsPathBlocked(IList<CrossingHatch> hatches, CrossingQuery q, bool conningTowerHatchBlocked)
 		{

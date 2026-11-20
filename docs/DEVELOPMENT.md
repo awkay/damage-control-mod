@@ -380,11 +380,13 @@ Patch ids: `Reachability`, `DoorTraverse`, `LadderTraverse`, `EvacuationCancel`.
 
 | # | Setup | Action | Expected | Grep |
 |---|---|---|---|---|
-| 6.1 reachability (B9) | A hatch held shut (3.1) | Order a crewman to a station behind it | The order is unavailable for him; orders on the near side work. Open hatches never count as blocked. | - |
-| 6.2 traverse (B10) | A crewman already walking toward that hatch when it locks | Watch | He stops at the hatch and the hatch stays closed. The bridge ladder is unaffected when surfaced. | `stopped at blocked hatch` |
+| 6.1 reachability (B9) | A hatch held shut (3.1, or a hatch under repair as in 4.7 with blocking off) | Order a crewman to a station behind it | The order is unavailable for him; orders on the near side work. Open hatches never count as blocked. With blocking off and no repair, no closed hatch ever blocks an order (C33). | `B9: destination unreachable for ... behind hatch "...": pressure-locked` (or `held shut for a repair`) |
+| 6.2 traverse (B10) | A crewman already walking toward that hatch when it locks | Watch | He stops at the hatch and the hatch stays closed. The bridge ladder is unaffected when surfaced. | `B10: ... stopped at blocked hatch "...": ...` |
+| 6.2a vanilla-only locks (C33) | Blocking off, no repairs; close the toilet door and a bulkhead hatch | Submerge below 2 m and order crew through both | They open them and walk through as without the mod | no `B9:` or `B10:` lines |
 | 6.3 conning tower | Periscope depth | Order crew from the control room to the tower and back | Works; the tower hatch is not blocked submerged | - |
 | 6.4 evacuation cancel (B11) | Evacuate a compartment | Give one evacuating crewman another order | He follows it; the others keep evacuating | - |
 | 6.5 no regressions | No hatch blocked | Normal play for a few minutes | Crew move as in vanilla | - |
+| 6.6 dive clears the bridge (C33) | Surfaced, several men on the bridge (watch, AA), Debug on. Run it four times: blocking off and on, each with and without a repair running on the tower hatch to the control room started before the dive | Order an alarm dive | Every man on the bridge climbs down and the exterior hatch shuts; nobody is left outside or drowns. With the tower hatch under repair they may wait in the tower, but they all get inside. Compare with the mod disabled. | no `B10: ... stopped at blocked hatch` for anyone leaving the bridge; `B10: let ... through ...: leaving the deck on a dive` is fine |
 
 ### Stage 7: pressure and air (WS1)
 

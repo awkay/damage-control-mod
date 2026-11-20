@@ -119,39 +119,104 @@ namespace DamageControl.Tests
             Assert.True(HatchCrossing.Combine(true, blocked));
         }
 
-        // ---- hatch state
+        // ---- the mod's hold (00 C33): only hatches Damage Control itself holds shut count
 
-        [Theory]
-        [InlineData(true, false, true)]
-        [InlineData(true, true, false)]
-        [InlineData(false, false, false)] // an open hatch is passable
-        [InlineData(false, true, false)]
-        public void BlockedMeansClosedAndCannotBeOpened(bool locked, bool canBeOpened, bool expected)
+        private static HatchHoldState Closed(bool repairHeld = false, bool pressureBlocking = false, bool canBeOpened = true,
+            bool exterior = false, bool hasCompartments = true, bool locked = true)
         {
-            Assert.Equal(expected, HatchCrossing.IsBlocked(locked, canBeOpened));
+            return new HatchHoldState
+            {
+                Locked = locked,
+                IsExterior = exterior,
+                HasCompartments = hasCompartments,
+                RepairHeld = repairHeld,
+                PressureBlockingEnabled = pressureBlocking,
+                CanBeOpened = canBeOpened,
+            };
+        }
+
+        [Fact]
+        public void Hold_PressureLockCountsOnlyWithPressureBlockingOn()
+        {
+            Assert.Equal(HatchHold.PressureLock, HatchCrossing.HoldOf(Closed(pressureBlocking: true, canBeOpened: false)));
+            // P14 off: "cannot be opened" is vanilla's own rule (flooded blockade side); vanilla opens it on traverse.
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(pressureBlocking: false, canBeOpened: false)));
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(pressureBlocking: true, canBeOpened: true)));
+        }
+
+        [Fact]
+        public void Hold_RepairHoldCountsWithPressureBlockingOff()
+        {
+            Assert.Equal(HatchHold.RepairHold, HatchCrossing.HoldOf(Closed(repairHeld: true, canBeOpened: false)));
+            Assert.Equal(HatchHold.RepairHold, HatchCrossing.HoldOf(Closed(repairHeld: true, pressureBlocking: true, canBeOpened: false)));
+        }
+
+        [Fact]
+        public void Hold_VanillaDeckDepthRuleOnACompartmentlessHatchNeverCounts()
+        {
+            // Doors and other hatches without compartments: vanilla says "cannot be opened" whenever the boat is
+            // set below 2 m. Counting that stranded crew on every dive.
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(hasCompartments: false, canBeOpened: false)));
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(hasCompartments: false, pressureBlocking: true, canBeOpened: false)));
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(hasCompartments: false, repairHeld: true, canBeOpened: false)));
+        }
+
+        [Fact]
+        public void Hold_ExteriorHatchIsNeverHeld()
+        {
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(exterior: true, pressureBlocking: true, canBeOpened: false)));
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(exterior: true, repairHeld: true, canBeOpened: false)));
+        }
+
+        [Fact]
+        public void Hold_AnOpenHatchIsPassable()
+        {
+            Assert.Equal(HatchHold.None, HatchCrossing.HoldOf(Closed(locked: false, repairHeld: true, pressureBlocking: true, canBeOpened: false)));
         }
 
         // ---- B10 (03 §2.F door and ladder traverse; part of 03 §6 #26)
 
-        [Fact]
-        public void B10_TraverseThroughABlockedHatchCancelsOrders()
-        {
-            Assert.True(HatchCrossing.ShouldCancelTraverse(true, false, true, false));
-        }
-
-        [Fact]
-        public void B10_ExteriorHatchIsExempt()
-        {
-            Assert.False(HatchCrossing.ShouldCancelTraverse(true, true, true, false));
-        }
-
         [Theory]
-        [InlineData(false, false, false, false)]
-        [InlineData(true, false, true, true)]
-        [InlineData(true, false, false, false)]
-        public void B10_NoCancelWithoutABlockedHatch(bool hasHatch, bool exterior, bool locked, bool canBeOpened)
+        [InlineData(HatchHold.PressureLock)]
+        [InlineData(HatchHold.RepairHold)]
+        public void B10_TraverseThroughAHeldHatchCancelsOrders(HatchHold hold)
         {
-            Assert.False(HatchCrossing.ShouldCancelTraverse(hasHatch, exterior, locked, canBeOpened));
+            Assert.True(HatchCrossing.ShouldCancelTraverse(hold, new TraverserState()));
+        }
+
+        [Fact]
+        public void B10_NoCancelWhenTheModHoldsNothing()
+        {
+            Assert.False(HatchCrossing.ShouldCancelTraverse(HatchHold.None, new TraverserState()));
+            // A dive with P14 off: the tower or a door is closed and vanilla says it cannot be opened.
+            HatchHold vanillaOnly = HatchCrossing.HoldOf(Closed(hasCompartments: false, canBeOpened: false));
+            Assert.False(HatchCrossing.ShouldCancelTraverse(vanillaOnly, new TraverserState()));
+        }
+
+        [Fact]
+        public void B10_EvacuatingCrewAreNeverCancelled()
+        {
+            Assert.False(HatchCrossing.ShouldCancelTraverse(HatchHold.PressureLock, new TraverserState { Evacuating = true }));
+        }
+
+        [Fact]
+        public void B10_CrewLeavingTheDeckOnADiveAreNeverCancelled()
+        {
+            Assert.False(HatchCrossing.ShouldCancelTraverse(HatchHold.RepairHold, new TraverserState { LeavingDeckForDive = true }));
+            Assert.False(HatchCrossing.ShouldCancelTraverse(HatchHold.PressureLock, new TraverserState { LeavingDeckForDive = true }));
+        }
+
+        [Fact]
+        public void B10_CrewAlreadyOnTheLinkAreNeverCancelled()
+        {
+            Assert.False(HatchCrossing.ShouldCancelTraverse(HatchHold.PressureLock, new TraverserState { AlreadyTraversing = true }));
+        }
+
+        [Fact]
+        public void HoldReasonsAreDescribed()
+        {
+            Assert.Contains("repair", HatchCrossing.Describe(HatchHold.RepairHold));
+            Assert.Contains("pressure", HatchCrossing.Describe(HatchHold.PressureLock));
         }
     }
 }

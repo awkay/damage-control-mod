@@ -341,12 +341,14 @@ The order is cancelled if the diesel stops, the deck goes under, or the boat doc
 
 ### Crew movement
 
-- **Blocked hatches stop crew.** An order whose destination lies behind a closed hatch that cannot be
-  opened is unavailable for that crewman, even when you give it directly. Orders on his side of the
+- **Blocked hatches stop crew.** An order whose destination lies behind a hatch the mod is holding
+  shut is unavailable for that crewman, even when you give it directly. Orders on his side of the
   hatch still work. An open hatch never counts as blocked.
 - A crewman already walking toward a hatch when it locks **stops at the hatch** and his orders are
-  cancelled. The hatch stays shut.
-- The exterior hatch and the bridge ladder are not affected.
+  cancelled. The hatch stays shut. Men evacuating a compartment and men getting off the deck when
+  the boat dives are never stopped.
+- Hatches the base game itself keeps closed, for example when diving, are not affected: the crew
+  open them as usual. Neither are the exterior hatch and the bridge ladder.
 - **Evacuation can be cancelled.** Give an evacuating crewman a new order and he follows it. The others
   keep evacuating.
 

@@ -262,6 +262,14 @@ This hooks the player submarine's fixed update and runs before it.
   hatches/pressure spec, so navigation quality depends on it. The evacuation flags are set by
   the hatch and evacuation logic in that spec.
 
+Architect note (00 C33): in 2026.1, "cannot be opened" also covers hatches vanilla opens on traverse
+anyway (a hatch with no blockade compartment whenever the boat is set below 2 m; a flooded blockade
+side with hatch pressure blocking off). The reachability and traverse rules above therefore apply only
+to hatches the mod itself holds shut: a closed interior hatch with a compartment that is under repair,
+or that cannot be opened while hatch pressure blocking is on. The exterior hatch is never one. The
+traverse cancel also never applies to a crewman on an evacuation order, one getting off the deck
+because the boat dives, or one already part way up or down that ladder.
+
 ### G. Automation gates
 
 These live in the navigation file but relate to other areas.
@@ -494,11 +502,14 @@ against pure functions, or by code and patch inspection.
 
 **Navigation (F, G)**
 
-24. Reachability returns false when a crossed hatch cannot be opened, even for a player order.
+24. Reachability returns false when a crossed hatch cannot be opened, even for a player order
+    (2026.1: only a hatch the mod holds shut, 00 C33).
 25. Reachability returns false for an evacuation-flagged compartment on a non-player order, and true
     for a player order.
 26. **[game]** A crewman ordered through a pressure-blocked hatch stops at it instead of clipping
-    through. An evacuation order can be cancelled by the player.
+    through. An evacuation order can be cancelled by the player. (2026.1, 00 C33: hatches closed
+    only by vanilla's rules never stop anyone, and on a dive every crewman on the bridge gets below,
+    with hatch pressure blocking on or off.)
 27. Officers changing action do not trigger compartment evacuation handling.
 28. With auto leak blocking OFF, the vanilla sailor leak-blocking behavior does not run. With it
     ON, it runs.

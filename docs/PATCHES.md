@@ -55,9 +55,9 @@ Columns:
 | `LeakBlockingBySailors.DoUpdate` (private) | `LeakBlockingGatePatch` | WS3 | prefix, skips original when off | | - | H12 gate. Outside a campaign the setting reads its default (on), so vanilla runs. |
 | `AutoCarryWoundedToSafety.DoUpdate` (private) | `AutoCarryWoundedGatePatch` | WS3 | prefix, skips original (returns 2.5 s) | | - | H13 gate. Never skips while a diver waits (C27). |
 | `AutomaticActionsController.DoUpdate` (private) | `TrimPumpLeakHoldPatch` | WS3 | prefix + postfix, writes private `pumpDelay` | | - | H14: no trim-pump auto-off while anything leaks. |
-| `NavMeshNavigator.IsDestinationReachable` | `ReachabilityPatch` | WS4 | postfix (only true -> false) | | G | B9: blocked hatches make destinations unreachable. |
-| `NavMeshDoors.TraverseStart` | `DoorTraversePatch` | WS4 | prefix | | G | B10: cancel orders at a blocked door. |
-| `NavMeshLadder.TraverseStart` | `LadderTraversePatch` | WS4 | prefix | | G | B10: same for ladder hatches. The exterior hatch is exempt. |
+| `NavMeshNavigator.IsDestinationReachable` | `ReachabilityPatch` | WS4 | postfix (only true -> false) | | G | B9: hatches the mod holds shut (repair hold; pressure lock with P14 on) make destinations unreachable. Vanilla-only locks never count (00 C33). |
+| `NavMeshDoors.TraverseStart` | `DoorTraversePatch` | WS4 | prefix | | G | B10: cancel orders at a door the mod holds shut (00 C33). Never for evacuating crew or crew leaving the deck on a dive. |
+| `NavMeshLadder.TraverseStart` | `LadderTraversePatch` | WS4 | prefix | | G | B10: same for ladder hatches; also never for a climber already on the ladder's queue (reads private `navigators`). The exterior hatch is exempt. |
 | `EvacuateToSafetyAction.Escape` (private) | `EvacuationCancelPatch` | WS4 | prefix | | - | B11: evacuation can be cancelled. |
 | `DeviceUseAction.UseDevice` | `RepairSlotPatch` | WS5 | prefix (ref `slotTag`; acts only for `RepairAction`) | | - | R1: repair slot fallback. |
 | `RepairAction.GetState(5 args)` | `RepairStatePatch` | WS5 | postfix | | - | R1: offer the repair through a free Block Leak slot. |
