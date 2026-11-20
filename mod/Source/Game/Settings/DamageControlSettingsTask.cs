@@ -10,7 +10,8 @@ namespace DamageControl.Game.Settings
 	/// <summary>
 	/// R9: the per-campaign settings store. Declared in our General sheet, worksheet "Background Tasks",
 	/// with start event CampaignStart, so the game creates one per new campaign and writes its fields into
-	/// the save. Saves made before the mod was installed get one from <see cref="DcSettings"/> after loading.
+	/// the save. Saves made before the mod was installed get one after loading (the game re-runs missing
+	/// CampaignStart tasks; <see cref="DcSettings"/> creates one if it did not). Extra instances are finished.
 	///
 	/// This class only stores the values (plain bool fields, so a renamed or removed field degrades to its
 	/// default instead of breaking the save) and publishes itself as the active store. Logic lives in Core
@@ -41,13 +42,13 @@ namespace DamageControl.Game.Settings
 		/// <summary>Fresh instance (new campaign, or created for a pre-mod save).</summary>
 		public override void Start()
 		{
-			DcSettings.OnTaskStarted(this, restored: false);
+			DcSettings.OnTaskStarted(this, SettingsTaskSource.Fresh);
 		}
 
 		/// <summary>Instance restored from a save.</summary>
 		public override void Resume()
 		{
-			DcSettings.OnTaskStarted(this, restored: true);
+			DcSettings.OnTaskStarted(this, SettingsTaskSource.Restored);
 		}
 
 		protected override void OnFinished()

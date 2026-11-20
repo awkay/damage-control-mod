@@ -135,8 +135,11 @@ value across frames: read it each time, which costs a field read.
 
 Storage is `DamageControlSettingsTask`, a `[Serializable] BackgroundTaskBase` declared in
 `General/Background Tasks` with start event `CampaignStart`. It holds plain bool fields. A save made
-before the mod was installed gets the task, with defaults, right after it loads (`DcSettings.EnsureTask`,
-queued from `SavesManager.Loaded`). Nothing else stores settings. A new persistent setting is a WS0
+before the mod was installed gets the task, with defaults, right after it loads: the game re-runs the
+missing `CampaignStart` task itself, and an action queued from `SavesManager.Loaded` creates one if it did
+not and finishes any extra instances. Core's `SettingsTaskTracker<T>` decides which instance is the store
+(one per session; a restored one beats a fresh one; the fresh one created before a main-menu load is
+provisional and starts no session). Nothing else stores settings. A new persistent setting is a WS0
 change: add a `SettingId` member, a field on the task, and a toggle row.
 
 The three toggle actions are rows of `SettingToggleAction` on the vanilla `Workshop` activator. They

@@ -5,6 +5,7 @@ using DamageControl.Core.Settings;
 using DWS.Common.InjectionFramework;
 using UBOAT.Game.Core;
 using UBOAT.Game.Core.Serialization;
+using UBOAT.Game.Sandbox.Missions;
 using UBOAT.Game.Scene.Tasks;
 
 namespace DamageControl.Game.Settings
@@ -15,8 +16,10 @@ namespace DamageControl.Game.Settings
 	/// need a null check. Writes go through <see cref="Toggle"/>/<see cref="Set"/>, which update the
 	/// active <see cref="DamageControlSettingsTask"/> (and so the save) and raise <see cref="Changed"/>.
 	///
-	/// Also the campaign-session signal: <see cref="SessionStarted"/> fires when a campaign starts or a
-	/// save finishes loading. Session-only static state (one-shot flags and the like) resets there.
+	/// Also the campaign-session signal: <see cref="SessionStarted"/> fires once per session, when a new
+	/// campaign's settings are created or a load ends with its one settings store (restored, or created with
+	/// defaults for a pre-mod save). Session-only static state (one-shot flags and the like) resets there.
+	/// Which instance is the store is decided by Core's <see cref="SettingsTaskTracker{T}"/>.
 	/// Main thread only.
 	/// </summary>
 	public static class DcSettings
@@ -36,7 +39,7 @@ namespace DamageControl.Game.Settings
 		private static GameState gameState;
 		#pragma warning restore 0649
 
-		private static DamageControlSettingsTask active;
+		private static readonly SettingsTaskTracker<DamageControlSettingsTask> tracker = new SettingsTaskTracker<DamageControlSettingsTask>();
 		private static SettingsModel model;
 		private static bool saveHookInstalled;
 
@@ -49,7 +52,7 @@ namespace DamageControl.Game.Settings
 		/// <summary>True while a campaign's settings store is active.</summary>
 		public static bool IsCampaignActive
 		{
-			get { return active != null && model != null; }
+			get { return tracker.Active != null && model != null; }
 		}
 
 		/// <summary>P14. Default off.</summary>
@@ -98,14 +101,14 @@ namespace DamageControl.Game.Settings
 			}
 			if (model.Set(id, value))
 			{
-				active.Store(model);
+				tracker.Active.Store(model);
 				DcLog.Info("setting " + id + " is now " + (value ? "on" : "off"));
 				Raise(id, value);
 			}
 			return value;
 		}
 
-		/// <summary>Bootstrap: after every save load, make sure a settings store exists (pre-mod saves have none).</summary>
+		/// <summary>Bootstrap: track save loads so each load ends with exactly one settings store (pre-mod saves have none).</summary>
 		public static void InstallSaveHook()
 		{
 			if (saveHookInstalled)
@@ -115,56 +118,68 @@ namespace DamageControl.Game.Settings
 				DcLog.Warn("SavesManager not available; pre-mod saves will run with default settings and nothing to save them in");
 				return;
 			}
+			savesManager.LoadingStarted += OnLoadingStarted;
 			savesManager.Loaded += OnSaveLoaded;
 			saveHookInstalled = true;
 		}
 
 		/// <summary>
-		/// Creates the settings task if a campaign is in gameplay and none is running. The game creates it
-		/// on CampaignStart; this covers saves made before the mod was installed. The new task starts with
-		/// the D3 defaults and is saved with the campaign from then on.
+		/// True when a save is loading or about to. Loading from the main menu sets the start mode, then loads
+		/// "Main Scene", which enters gameplay and fires the game's CampaignStart before the load begins
+		/// (the game's own PreserveGameplaySettingsInGameState checks the same flag).
 		/// </summary>
-		public static void EnsureTask()
+		private static bool LoadPending()
 		{
-			if (active != null || backgroundTasksManager == null)
-				return;
 			if (savesManager != null && savesManager.IsLoading)
-				return;
-			if (gameState == null || gameState.CurrentState != GameState.State.Gameplay)
-				return;
-			DamageControlSettingsTask running = backgroundTasksManager.GetRunningTask<DamageControlSettingsTask>();
-			if (running != null)
-			{
-				OnTaskStarted(running, true);
-				return;
-			}
-			DcLog.Info("this save has no Damage Control settings yet; creating them with defaults");
-			backgroundTasksManager.StartTask<DamageControlSettingsTask>();
-			if (active == null)
-				DcLog.Error("could not create the settings task; is the General/Background Tasks row \"" + DamageControlSettingsTask.RowKey + "\" missing?");
+				return true;
+			return StartScript.overrideMode == StartScript.StartMode.LoadGameState;
 		}
 
-		internal static void OnTaskStarted(DamageControlSettingsTask task, bool restored)
+		internal static void OnTaskStarted(DamageControlSettingsTask task, SettingsTaskSource source)
 		{
-			if (active != null && !ReferenceEquals(active, task))
+			DamageControlSettingsTask displaced;
+			SettingsTaskVerdict verdict = tracker.OnStarted(task, source, LoadPending(), out displaced);
+			if (displaced != null)
 			{
-				if (!restored)
-				{
-					// A second fresh instance (e.g. CampaignStart after EnsureTask): keep the first.
-					DcLog.Info("duplicate settings task ignored");
+				DcLog.Info("settings task created before the save's own was restored; finishing it");
+				model = null;
+				displaced.Finish();
+			}
+			switch (verdict)
+			{
+				case SettingsTaskVerdict.AlreadyActive:
+					return;
+				case SettingsTaskVerdict.Duplicate:
+					DcLog.Info("duplicate settings task (" + (source == SettingsTaskSource.Restored ? "restored" : "new") + ") finished; keeping the active one");
 					task.Finish();
 					return;
-				}
-				// A restored instance carries the saved values and wins over one we created.
-				DamageControlSettingsTask previous = active;
-				active = null;
-				model = null;
-				previous.Finish();
+				case SettingsTaskVerdict.Provisional:
+					model = task.ToModel();
+					DcLog.Info("settings task held as provisional: a save is about to load and will replace it");
+					return;
+				case SettingsTaskVerdict.Restored:
+					BeginSession(task, "restored from the save");
+					return;
+				case SettingsTaskVerdict.CreatedForSave:
+					BeginSession(task, "created with defaults (the save had none)");
+					return;
+				default:
+					BeginSession(task, "created for a new campaign");
+					return;
 			}
-			active = task;
+		}
+
+		internal static void OnTaskFinished(DamageControlSettingsTask task)
+		{
+			if (tracker.OnFinished(task))
+				model = null;
+		}
+
+		private static void BeginSession(DamageControlSettingsTask task, string how)
+		{
 			model = task.ToModel();
 			DcLog.ResetOnceKeys();
-			DcLog.Info("campaign settings " + (restored ? "restored" : "created") + ": " + model);
+			DcLog.Info("campaign settings " + how + ": " + model);
 			Action handler = SessionStarted;
 			if (handler != null)
 			{
@@ -182,32 +197,84 @@ namespace DamageControl.Game.Settings
 			}
 		}
 
-		internal static void OnTaskFinished(DamageControlSettingsTask task)
+		private static void OnLoadingStarted()
 		{
-			if (!ReferenceEquals(active, task))
-				return;
-			active = null;
+			// The game finishes every saved task now; the save brings its own (or none).
+			tracker.OnLoadingStarted();
 			model = null;
 		}
 
 		private static void OnSaveLoaded(Queue<Action> afterLoad)
 		{
-			// Queued so it runs after the game has resumed every restored task.
+			// Queued so it runs after every Loaded handler, i.e. after the game resumed the restored tasks
+			// and re-created the missing CampaignStart ones.
 			if (afterLoad != null)
-				afterLoad.Enqueue(SafeEnsureTask);
+				afterLoad.Enqueue(SafeAfterLoad);
 			else
-				SafeEnsureTask();
+				SafeAfterLoad();
 		}
 
-		private static void SafeEnsureTask()
+		private static void SafeAfterLoad()
 		{
 			try
 			{
-				EnsureTask();
+				ReconcileAfterLoad();
 			}
 			catch (Exception e)
 			{
-				DcLog.Exception("DcSettings.EnsureTask", e);
+				DcLog.Exception("DcSettings.ReconcileAfterLoad", e);
+			}
+			finally
+			{
+				tracker.OnLoadFinished();
+			}
+		}
+
+		/// <summary>
+		/// After a load: keep exactly one settings task. Finishes extras, adopts an unreported restored
+		/// instance, and creates one with defaults if the load left none (the game normally re-creates it
+		/// itself for a pre-mod save; this is the fallback).
+		/// </summary>
+		private static void ReconcileAfterLoad()
+		{
+			if (backgroundTasksManager == null)
+				return;
+			List<IBackgroundTask> all = new List<IBackgroundTask>();
+			backgroundTasksManager.GetRunningTasks(all);
+			List<DamageControlSettingsTask> running = new List<DamageControlSettingsTask>();
+			foreach (IBackgroundTask t in all)
+			{
+				DamageControlSettingsTask ours = t as DamageControlSettingsTask;
+				if (ours != null)
+					running.Add(ours);
+			}
+			List<DamageControlSettingsTask> extras = new List<DamageControlSettingsTask>();
+			SettingsLoadOutcome outcome = tracker.OnLoadCompleted(running, extras);
+			if (tracker.Active == null)
+				model = null;
+			foreach (DamageControlSettingsTask extra in extras)
+			{
+				DcLog.Info("duplicate settings task found after the load; finishing it");
+				extra.Finish();
+			}
+			switch (outcome)
+			{
+				case SettingsLoadOutcome.AdoptedRestored:
+					BeginSession(tracker.Active, "restored from the save");
+					return;
+				case SettingsLoadOutcome.PromotedProvisional:
+					BeginSession(tracker.Active, "created for a new campaign");
+					return;
+				case SettingsLoadOutcome.NeedsCreate:
+					if (gameState == null || gameState.CurrentState != GameState.State.Gameplay)
+						return;
+					DcLog.Info("no settings task after the load; starting one");
+					backgroundTasksManager.StartTask<DamageControlSettingsTask>();
+					if (tracker.Active == null)
+						DcLog.Error("could not create the settings task; is the General/Background Tasks row \"" + DamageControlSettingsTask.RowKey + "\" missing?");
+					return;
+				default:
+					return;
 			}
 		}
 

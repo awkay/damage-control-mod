@@ -589,19 +589,34 @@ re-register in `Resume` if that matters). `TaskCreated` fires for fresh instance
 3. Load save -> `SavesManager.LoadingStarted` calls `Finish()` on current campaign tasks ->
    the deserializer recreates the saved task instances and fills their fields (no ctor
    logic beyond field initialisers should be assumed; inferred) -> `CustomDeserialization`
-   drops null entries -> on `SavesManager.Loaded`, `Resume()` is called on each. `CampaignStart`
-   is not re-fired for a restored game, so no duplicate is created.
+   drops null entries -> on `SavesManager.Loaded`, `Resume()` is called on each, then every
+   still-active-event row without a running instance is run fresh (see below).
 4. Back to menu -> `CampaignStop` -> `Finish()`.
 
-**Saves made before a mod was installed get no `CampaignStart` task.** `CampaignStart` fires only for a
-brand-new campaign. After a save loads, `SavesManagerOnLoaded` calls `LoadTasks(true)`, which starts
-only rows whose event is currently active, and `CampaignStart` is not active for a restored game.
-`BackgroundTasksManager.StartTask<T>()` runs a defined task through the normal path, and a task
-declared with `CampaignStart` is added to the saved list. WS0 calls it from an action queued on
-`SavesManager.Loaded` (the event hands out a `Queue<Action>` that runs after all handlers) when
-`GetRunningTask<T>()` returns null. The game enters `GameState.State.Gameplay` when "Main Scene"
-loads, which is before the save is deserialized, and fires `GameplayStart` then `CampaignStart` in the
-same handler.
+**Load order and the `CampaignStart` task (checked in the first in-game run).** `activeEvents` is not
+saved and `CampaignStart` stays in it until `CampaignStop` (main menu or quitting). So:
+
+- **Loading from the main menu** (`LoadGameStateUI`/`MainMenu`/`IntroScene` set
+  `StartScript.overrideMode = LoadGameState`, then load "Main Scene"): the scene load enters
+  `GameState.State.Gameplay` with `IsRestoredGameState` false and `IsLoading` false, so `CampaignStart`
+  fires and a **fresh** task is created and `Start()`ed *before* `StartScript.Start` calls
+  `SavesManager.Load`. `LoadingStarted` then `Finish()`es it. The flag
+  `StartScript.overrideMode == LoadGameState` (also checked by the game's
+  `PreserveGameplaySettingsInGameState`) tells such a doomed task apart from a new campaign.
+- **Loading in game** (pause menu, quick load): no state change, so no task before the load;
+  `LoadingStarted` finishes the current ones.
+- **After the load** (`SavesManager.Loaded`, `isLoading` already false): the manager first `Resume()`s the
+  restored tasks, then `LoadTasks(true)` drops definitions with no running instance, re-reads the rows and
+  **runs every row whose event is active**. `CampaignStart` is active, so a task the save lacks (a save made
+  before the mod) is **re-created by the game with `Start()`**; a restored one is running and is skipped.
+  The manager subscribes in `AwakeSingleton`, before any mod, so its handler runs before ours; actions put
+  in the `Queue<Action>` run after all handlers, one per frame.
+
+DC therefore treats the pre-load fresh task as provisional (no session), forgets the store on
+`LoadingStarted`, and in a queued post-load action keeps exactly one running instance (finishing extras)
+or calls `BackgroundTasksManager.StartTask<T>()` if none survived (`docs/spec/WS0-API.md` §3).
+`StartTask<T>()` runs a defined task through the normal path; a task declared with `CampaignStart` is
+added to the saved list.
 
 **ExecutionQueue listeners are saved.** `ExecutionQueue.CustomSerialization` writes the update,
 fixed-update and timed queues, which hold delegates, into the save. Code in a transient object should

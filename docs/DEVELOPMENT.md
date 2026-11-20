@@ -302,12 +302,12 @@ Stop at the first failed item and report it with the log lines it names.
 | 1.2 | - | Look at the log after the main menu | Icons load: the count equals the number of PNGs under `mod/Assets/Icons` (26 at WS7) | `icons ready: 26 served`; no `icon ... failed to load` |
 | 1.3 | - | Quit, launch again (cached-DLL launch, security-checked) | Same `loaded` line. If it is missing, the security check rejected the cached assembly. | `loaded; applying Harmony patches` |
 | 1.4 | Main menu | Wait 30 s, open the options and the load-game screen | No mod errors while outside gameplay | no `DamageControl` in any exception; no `patch ... threw` |
-| 1.5 | - | Start a new campaign and go aboard | Settings task created with the D3 defaults | `campaign settings created: HatchPressureBlocking=False, AutoLeakBlocking=True, AutoCarryWounded=True` |
+| 1.5 | - | Start a new campaign and go aboard | Settings task created once, with the D3 defaults | exactly one `campaign settings created for a new campaign: HatchPressureBlocking=False, AutoLeakBlocking=True, AutoCarryWounded=True`; no `duplicate settings task` |
 | 1.6 | Aboard | Open the interaction wheel on the Workshop (stern torpedo room) | After the workshop's own orders come our three toggles ("Enable hatch pressure blocking", "Stop sailors blocking leaks on their own", "Stop the crew carrying the wounded on their own"), each with its icon. Hovering shows the amber icon and the description. | with Debug on: `action registration: 3 mod action rows registered` |
 | 1.7 | - | Click each toggle once with no crewman selected | The label flips at once; no crewman walks; no work-order voice line | `setting HatchPressureBlocking is now on` (and the other two) |
 | 1.8 | - | Look at an interior hatch, a pipe and the bilges | The hatch panel shows two pressures; the bilge panel ends with an air-pressure line in atm | no `patch HatchGetStateText threw`, `BilgePressure` |
 | 1.9 | Toggles changed in 1.7 | Run 1 minute at 1x, then 1 minute at 64x | Nothing unusual; no water moves in a dry boat | no `patch HatchDoUpdate threw`, `CompartmentTick`, `Venting`, `CompressorDraw` |
-| 1.10 | - | Save, quit to the menu, load the save | Toggles keep their changed values; the wheel labels match | `campaign settings restored:` with the changed values |
+| 1.10 | - | Save, quit to the menu, load the save | Toggles keep their changed values; the wheel labels match. One settings line per load. | before `Loading save file`: `settings task held as provisional: a save is about to load`; after it, exactly one `campaign settings restored from the save:` with the changed values; no `campaign settings created`, no `duplicate settings task`, no `no settings task after the load` |
 
 If Stage 1 passes, the mod loads, patches, serves icons, saves and stays quiet outside gameplay.
 
@@ -436,7 +436,7 @@ Set Debug on for the `dismantle: ...` and `salvage ratio: ...` lines. Patch ids:
 
 | # | Setup | Action | Expected | Grep |
 |---|---|---|---|---|
-| 10.1 pre-mod save | A save made with the mod disabled | Load it with the mod enabled; save; load again | First load: defaults created. Second load: restored. | `this save has no Damage Control settings yet; creating them with defaults`, then `campaign settings restored:` |
+| 10.1 pre-mod save | A save made with the mod disabled | Load it from the main menu with the mod enabled; save; load again (once from the menu, once from the in-game load screen) | First load: defaults created once, after the restore. Second and third loads: restored, values kept. | first load: `settings task held as provisional`, then after `Loading save file` exactly one `campaign settings created with defaults (the save had none):`; later loads: exactly one `campaign settings restored from the save:` each; never `duplicate settings task` or `could not create the settings task` |
 | 10.2 removal | A save made with the mod | Load it with the mod disabled | At most an error about the unknown task type; the campaign plays normally | - |
 | 10.3 Custom Actions (D2) | Custom Actions enabled too | Open the Workshop wheel | Each toggle appears exactly once | - |
 | 10.4 boat layout | Debug on | Go aboard | `boat layout built:` lists each hatch's lowY and highY. The conning-tower hatch's lowY is near the control-room ceiling, and the exterior hatch's lowY is near the top of the tower. | `boat layout unknown:` means dependent features are off; report it |
