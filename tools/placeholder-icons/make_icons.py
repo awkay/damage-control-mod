@@ -4,9 +4,10 @@
 Stdlib only. Usage:
     python3 tools/placeholder-icons/make_icons.py OUT_DIR GLYPH:BADGE:"Icon Name" ...
 
-GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust.
+GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust, dismantle.
 BADGE is one of: none, on, off (a tick or a slash in the lower-right corner).
-For each icon it writes "<Icon Name>.png" (white) and "<Icon Name> (Highlighted).png" (amber).
+For each icon it writes "<Icon Name>.png" (white) and "<Icon Name> (Highlighted).png" (amber);
+with --disabled (anywhere in the arguments) also "<Icon Name> (Disabled).png" (grey).
 All art is generated geometry; nothing is copied from any other mod or game.
 """
 import math
@@ -67,6 +68,9 @@ GLYPHS = {
     "exhaust": lambda: union(disc(34, 22, 9), disc(50, 16, 11), disc(68, 22, 9),
                              line(56, 30, 56, 66, 6), line(56, 68, 44, 56, 6), line(56, 68, 68, 56, 6),
                              minus(rect(18, 54, 94, 106), rect(25, 61, 87, 99)), rect(29, 88, 83, 95)),
+    # dismantle (WS5): a spanner with loose pieces falling away from it
+    "dismantle": lambda: union(line(26, 92, 58, 60, 12), minus(disc(64, 52, 18), rect(60, 26, 96, 56)),
+                               rect(80, 80, 94, 94), rect(98, 62, 110, 74), rect(66, 100, 78, 112)),
 }
 
 BADGES = {
@@ -99,15 +103,20 @@ def main(argv):
     if len(argv) < 3:
         print(__doc__)
         return 2
+    disabled = "--disabled" in argv
+    argv = [a for a in argv if a != "--disabled"]
     out = argv[1]
     os.makedirs(out, exist_ok=True)
+    variants = [("", (255, 255, 255)), (" (Highlighted)", (255, 196, 64))]
+    if disabled:
+        variants.append((" (Disabled)", (128, 128, 128)))
     for spec in argv[2:]:
         glyph, badge, name = spec.split(":", 2)
         shape = GLYPHS[glyph]()
         b = BADGES[badge]
         if b is not None:
             shape = union(shape, b())
-        for suffix, rgb in (("", (255, 255, 255)), (" (Highlighted)", (255, 196, 64))):
+        for suffix, rgb in variants:
             path = os.path.join(out, name + suffix + ".png")
             with open(path, "wb") as f:
                 f.write(render(shape, rgb))

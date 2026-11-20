@@ -495,3 +495,48 @@ WS3-8. **Trim pump (H14).** With a leak somewhere aboard, run the trim pump unti
    exterior hatch automation behave as in vanilla.
 WS3-9. **Save/load (02 §6 #30).** The two automation toggles survive save/load (WS0 item 8); the one-shot carry
    order does not (it re-arms on load, WS3-7).
+
+### WS5: repair and parts
+
+The repair area adds 8 icons (dismantle: wheel normal, highlighted and disabled, action, cursor, banner,
+portrait) to the `icons ready` count. Set `General/Settings/Damage Control/Debug` to True for the
+`repair: ...`, `dismantle: ...` and `salvage ratio: ...` lines. No `patch Repair... threw` or
+`patch SalvageRatio... threw` line may appear in the log. The vanilla `RepairAction1` to `RepairAction3`
+and `SalvageReplacementParts` rows are not overridden (00 D4), so flaw repairs, sailor repair and the
+"do not repair" toggle must behave exactly as without the mod.
+
+WS5-1. **Salvage 4:1 (R5, 04 §8 #7).** With Debug on, the first salvage evaluation logs
+   `salvage ratio: 4 scrap per part`. A `salvage ratio: the game's salvage code did not match` warning (or a
+   `SalvageReplacementParts.<method> has N scrap constants` line at startup) means the transpiler stood
+   down and salvage is vanilla 2:1; report it. Put 3 scrap in the workshop: "Salvage replacement parts" is
+   disabled with vanilla's not-enough-scrap warning. With 9 scrap an engineer makes one part about every
+   100 s at 1x, the workshop scrap drops by 4 each time, and the order ends with 1 scrap left. Fill the
+   workshop storage: the order ends without using scrap. The scrap item tooltip states 4 to 1.
+WS5-2. **Repair station fallback (R1, 04 §8 #6).** On a leaking pipe or hull hole with a `Block Leak` slot,
+   put one crewman in the `Repair` slot (or let a sailor block the leak), then order an engineer to repair:
+   he goes to the free `Block Leak` (or `Default`) slot instead of reporting the slot as taken, and the
+   wheel offers the repair rather than disabling it. On a damaged hatch the repairer uses the hatch's
+   default slot. Check that the working animation at each slot looks right.
+WS5-3. **Leak throttle (R2, 04 §8 #5).** Repair a leaking pipe or hull hole: while the repairer works, the
+   leak visibly slows as the progress bar fills, and returns to full if he is pulled off before finishing.
+   Repairing equipment that is damaged but not leaking does nothing to leaks and throws nothing.
+WS5-4. **Hatch under repair (R3, 04 §8 #17).** With hatch pressure blocking **off**, damage an open interior
+   hatch and order a repair: the hatch closes when the repairer starts working, Open is disabled while the
+   repair status shows, and crew do not walk through it. After the repair it stays closed and can be opened
+   normally. A destroyed closed hatch under repair shows the one green "partly sealed" line and leaks less
+   (WS2 H7). The exterior hatch is never closed by a repair.
+WS5-5. **Dismantle (R6, 04 §8 #8).** An engineer's wheel on an intact listed device (engines, compressor,
+   trim pump, valves, a compartment hatch, guns, periscope ...) shows "Dismantle for scrap" last, with its
+   icon; it is absent for non-engineers and on broken devices (health below 1). The engineer works the
+   repair slot (default slot on hatches); health drops one point at a time at repair speed (a Handyman
+   about a quarter faster); at 0 the order ends, the device is broken and the main storage gains 1 scrap
+   (2 for a Thrifty engineer). With the main storage full the scrap goes into the engineer's hands; if
+   that is also impossible a `no room for scrap` line is logged.
+WS5-6. **Dismantle checks (04 Q3).** The order is disabled while someone repairs the device (vanilla's
+   "already being repaired" text), while another crewman is already dismantling it, while the device is
+   out of action (damaged, no power, flooded out of depth), while the engineer carries a blocking item,
+   and when its slot is under water and he has no rebreather. Check that every listed device type still
+   offers it when healthy; one that never does is probably not a `Device` and needs a report.
+WS5-7. **Save mid-order.** Save while a repair on a leaking pipe and a dismantle are running and reload: both
+   resume or are dropped cleanly; the pipe's leak is not left permanently reduced after the repair (a later
+   repair of the same pipe clears any leftover throttle), and the dismantle does not start over from full.
