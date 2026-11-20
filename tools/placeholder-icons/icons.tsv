@@ -1,26 +1,29 @@
 # Every shipped placeholder icon: output dir (relative to repo root), glyph, badge, disabled variant, icon name.
 # Regenerate all with tools/placeholder-icons/regen.
 mod/Assets/Icons/DamageControl/ballast/Actions	exhaust	none	-	DC Exhaust Blow
-mod/Assets/Icons/DamageControl/ballast/Actions - Cursor	exhaust	none	-	DC Exhaust Blow
+mod/Assets/Icons/DamageControl/ballast/Actions (Banners)	exhaust	none	-	DC Exhaust Blow
+mod/Assets/Icons/DamageControl/ballast/Actions - Cursor	exhaust	none	disabled	DC Exhaust Blow
 mod/Assets/Icons/DamageControl/ballast/InteractionWheelUI	exhaust	none	disabled	DC Exhaust Blow
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	cross	off	-	DC Disable Automatic Wounded Carrying
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	cross	on	-	DC Enable Automatic Wounded Carrying
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	drop	off	-	DC Disable Automatic Leak Blocking
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	drop	on	-	DC Enable Automatic Leak Blocking
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	hatch	off	-	DC Disable Hatch Pressure Blocking
-mod/Assets/Icons/DamageControl/common/Actions - Cursor	hatch	on	-	DC Enable Hatch Pressure Blocking
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	cross	off	disabled	DC Disable Automatic Wounded Carrying
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	cross	on	disabled	DC Enable Automatic Wounded Carrying
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	drop	off	disabled	DC Disable Automatic Leak Blocking
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	drop	on	disabled	DC Enable Automatic Leak Blocking
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	hatch	off	disabled	DC Disable Hatch Pressure Blocking
+mod/Assets/Icons/DamageControl/common/Actions - Cursor	hatch	on	disabled	DC Enable Hatch Pressure Blocking
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	cross	off	disabled	DC Disable Automatic Wounded Carrying
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	cross	on	disabled	DC Enable Automatic Wounded Carrying
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	drop	off	disabled	DC Disable Automatic Leak Blocking
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	drop	on	disabled	DC Enable Automatic Leak Blocking
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	hatch	off	disabled	DC Disable Hatch Pressure Blocking
 mod/Assets/Icons/DamageControl/common/InteractionWheelUI	hatch	on	disabled	DC Enable Hatch Pressure Blocking
-mod/Assets/Icons/DamageControl/hatches/Actions - Cursor	gauge	none	-	DC Equalize Pressure
+mod/Assets/Icons/DamageControl/hatches/Actions (Banners)	gauge	none	-	DC Equalize Pressure
+mod/Assets/Icons/DamageControl/hatches/Actions - Cursor	gauge	none	disabled	DC Equalize Pressure
 mod/Assets/Icons/DamageControl/hatches/InteractionWheelUI	gauge	none	disabled	DC Equalize Pressure
-mod/Assets/Icons/DamageControl/leaks/Actions - Cursor	cross	none	-	DC Carry Wounded Now
+mod/Assets/Icons/DamageControl/leaks/Actions (Banners)	cross	none	-	DC Carry Wounded Now
+mod/Assets/Icons/DamageControl/leaks/Actions - Cursor	cross	none	disabled	DC Carry Wounded Now
 mod/Assets/Icons/DamageControl/leaks/InteractionWheelUI	cross	none	disabled	DC Carry Wounded Now
 mod/Assets/Icons/DamageControl/repair/Actions	dismantle	none	-	DC Dismantle
 mod/Assets/Icons/DamageControl/repair/Actions (Banners)	dismantle	none	-	DC Dismantle
-mod/Assets/Icons/DamageControl/repair/Actions - Cursor	dismantle	none	-	DC Dismantle
+mod/Assets/Icons/DamageControl/repair/Actions - Cursor	dismantle	none	disabled	DC Dismantle
 mod/Assets/Icons/DamageControl/repair/InteractionWheelUI	dismantle	none	disabled	DC Dismantle
 mod/Assets/Icons/DamageControl/repair/Statuses (Portraits)	dismantle	none	-	DC Dismantle
