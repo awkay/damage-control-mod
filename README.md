@@ -7,6 +7,8 @@ them, and the crew have to work leaks, hatches and ballast by hand.
 > Status: 0.1.0, work in progress. It builds and passes the offline checks. In-game testing follows the
 > staged plan in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#in-game-test-plan).
 
+Players: install, settings and every feature are explained in the [player manual](docs/MANUAL.md).
+
 ## What it does
 
 **Compartments, air and pressure**

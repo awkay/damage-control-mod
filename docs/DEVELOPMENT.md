@@ -413,7 +413,7 @@ Set Debug on for the `exhaust blow ...` lines. Tunables are the `Exhaust Blow ..
 
 | # | Setup | Action | Expected | Grep |
 |---|---|---|---|---|
-| 8.1 listed (B2) | - | Wheel on the flooding-and-blowing valve station | "Blow ballast with diesel exhaust" with its icon; disabled when docked | - |
+| 8.1 listed (B2) | - | Wheel on the flooding-and-blowing valve station | "Exhaust blow (diesel)" with its icon; disabled when docked | - |
 | 8.2 gates | Submerged, or surfaced on E-motors, or ballast already dry | Hover the entry | Disabled with "The diesel must be running.", "The deck must be clear of the water." or "The ballast tanks are already empty." | - |
 | 8.3 blow (03 §6 #8) | Partly surfaced, diesels at any ahead speed | Order it | The crewman works the valve and the bar rises. The tanks empty while the HP air reading does not drop. It completes on its own (no stall at 99.9 %) and the preset shows Surface. Faster diesel speed empties faster. Vanilla blow and flood still work afterwards. | `exhaust blow complete` |
 | 8.4 cancel | During a blow | Stop the diesel, or dive | He leaves within about 3 game s and the tanks stop emptying. Waves washing over the deck do not cancel it. | `exhaust blow cancelled:` |
