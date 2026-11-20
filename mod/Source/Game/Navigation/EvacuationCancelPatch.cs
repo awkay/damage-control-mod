@@ -1,5 +1,6 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Characters.Actions;
 
@@ -12,6 +13,11 @@ namespace DamageControl.Game.Navigation
 	[HarmonyPatch(typeof(EvacuateToSafetyAction), "Escape")]
 	internal static class EvacuationCancelPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("EvacuationCancel", ex);
+		}
+
 		private static void Prefix(EvacuateToSafetyAction __instance)
 		{
 			try

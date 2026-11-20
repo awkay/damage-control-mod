@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Repair;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Characters;
 using UBOAT.Game.Scene.Characters.Actions;
@@ -19,6 +20,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(DeviceUseAction), "UseDevice")]
 	internal static class RepairSlotPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("RepairSlot", ex);
+		}
+
 		private static void Prefix(DeviceUseAction __instance, PlayableCharacter character, ref string slotTag, Device device)
 		{
 			try

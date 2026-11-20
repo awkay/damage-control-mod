@@ -1,5 +1,6 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Characters.Actions;
 
@@ -14,6 +15,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(RepairAction), "UpdateAction")]
 	internal static class RepairUpdatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("RepairUpdate", ex);
+		}
+
 		private static void Postfix(RepairAction __instance)
 		{
 			try
@@ -31,6 +37,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(RepairAction), "StopMainCharacter")]
 	internal static class RepairStopPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("RepairStop", ex);
+		}
+
 		private static void Postfix(RepairAction __instance)
 		{
 			try

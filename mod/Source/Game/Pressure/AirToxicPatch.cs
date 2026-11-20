@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Pressure;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core.Data;
 using UBOAT.Game.Scene.Items;
@@ -15,6 +16,11 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(Compartment), "IsAirToxic", MethodType.Getter)]
 	internal static class AirToxicPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("AirToxic", ex);
+		}
+
 		private static bool Prefix(Compartment __instance, Compartment ___mergedCompartment, Resource ___oxygen, ref bool __result)
 		{
 			try

@@ -2,6 +2,7 @@ using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Pressure;
 using DWS.Common.InjectionFramework;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core.Data;
 using UBOAT.Game.Scene.Characters;
@@ -18,6 +19,11 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(Storage), "GetStateText")]
 	internal static class BilgePressurePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("BilgePressure", ex);
+		}
+
 		private const string BilgeMarker = "Water";
 
 		#pragma warning disable 0649 // assigned by the game's injection framework

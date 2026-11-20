@@ -29,9 +29,13 @@ namespace DamageControl.Game.Bootstrap
 
 			Step("logging", GameLog.Install);
 			DcLog.Info(ModInfo.Describe() + " loaded; applying Harmony patches.");
-			// PatchAll() with no arguments patches every [HarmonyPatch] class in this assembly.
+			// PatchAll() with no arguments patches every [HarmonyPatch] class in this assembly. A class that
+			// cannot be applied is skipped through its Cleanup (PatchGuard) and runs vanilla; the rest still apply.
 			Step("harmony", () => new Harmony(HarmonyId).PatchAll());
-			DcLog.Info("Harmony patches applied.");
+			if (PatchGuard.FailedCount == 0)
+				DcLog.Info("Harmony patches applied.");
+			else
+				DcLog.Warn("Harmony patches applied; " + PatchGuard.FailedCount + " patch class(es) could not be applied and run vanilla (see \"(not applied)\" lines).");
 			Step("debug flag", GameLog.RefreshDebugFlag);
 			Step("settings save hook", DcSettings.InstallSaveHook);
 			Step("icons", IconRegistry.LoadAll);

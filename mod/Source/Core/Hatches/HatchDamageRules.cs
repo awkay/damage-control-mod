@@ -42,6 +42,22 @@ namespace DamageControl.Core.Hatches
 		}
 
 		/// <summary>
+		/// Chance the hatch blows open during this frame: the per-second hazard integrated over the frame's
+		/// whole game time (<see cref="SimClock.GameDt"/>, uncapped), so the hazard per game second is the
+		/// same at 1x and at 64x. Zero while paused.
+		/// </summary>
+		public static float BlowOpenChanceThisFrame(float chancePerSecond, SimClock clock)
+		{
+			return Probability.PerStep(chancePerSecond, clock.GameDt);
+		}
+
+		/// <summary>Rolls <see cref="BlowOpenChanceThisFrame"/>.</summary>
+		public static bool RollBlowOpen(IRandom random, float chancePerSecond, SimClock clock)
+		{
+			return random.Chance(BlowOpenChanceThisFrame(chancePerSecond, clock));
+		}
+
+		/// <summary>
 		/// 02 §2.3d: a destroyed, closed, idle hatch leaks; any health stops the leak. Adds only when no
 		/// Leaking status is present, so exactly one is ever added.
 		/// </summary>

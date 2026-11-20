@@ -2,6 +2,7 @@ using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Hatches;
 using DWS.Common.InjectionFramework;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core;
 using UBOAT.Game.Scene.Items;
@@ -18,6 +19,11 @@ namespace DamageControl.Game.Hatches
 	[HarmonyPatch(typeof(Hatch), "OnDisable")]
 	internal static class HatchOnDisablePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("HatchOnDisable", ex);
+		}
+
 		#pragma warning disable 0649 // assigned by the game's injection framework
 		[Inject]
 		private static GameState gameState;

@@ -24,6 +24,11 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(BuoyancyNotification), "GetTooltipContents")]
 	internal static class BuoyancyTooltipPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("BuoyancyTooltip", ex);
+		}
+
 		#pragma warning disable 0649 // assigned by the game's injection framework
 		[Inject]
 		private static Locale locale;

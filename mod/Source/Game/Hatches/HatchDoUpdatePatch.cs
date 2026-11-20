@@ -21,7 +21,7 @@ namespace DamageControl.Game.Hatches
 	/// <item>a. occlusion portal, reimplemented from the behavioural description;</item>
 	/// <item>b. the frame's game dt x damped rate (at most 8, vanilla's clamp), integrated in substeps of at
 	/// most 0.5 game seconds each (<see cref="HatchExchange.Substeps"/>);</item>
-	/// <item>c. destroyed-hatch blow-open as a per-second hazard (D7);</item>
+	/// <item>c. destroyed-hatch blow-open as a per-second hazard (D7), integrated over the whole frame;</item>
 	/// <item>d. Leaking status upkeep;</item>
 	/// <item>e. flow gate: open, or closed and leaking at 2 % x seal factor;</item>
 	/// <item>f/g. vertical or horizontal exchange through the Core kernel.</item>
@@ -31,6 +31,11 @@ namespace DamageControl.Game.Hatches
 	[HarmonyPatch(typeof(Hatch), "DoUpdate")]
 	internal static class HatchDoUpdatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("HatchDoUpdate", ex);
+		}
+
 		#pragma warning disable 0649 // assigned by the game's injection framework
 		[Inject]
 		private static MainCamera mainCamera;
@@ -54,7 +59,7 @@ namespace DamageControl.Game.Hatches
 				Compartment left = ___leftCompartment;
 				Compartment right = ___rightCompartment;
 				HatchGeometry geometry;
-				if (left == null || right == null || !BoatLayout.TryGetGeometry(__instance, out geometry))
+				if (left == null || right == null || !GameplayState.IsActive || !BoatLayout.TryGetGeometry(__instance, out geometry))
 					return true;
 				HatchRuntime.EnsureInitialized();
 
@@ -140,7 +145,7 @@ namespace DamageControl.Game.Hatches
 			{
 				bool beingRepaired = hatch.HasStatus<IsBeingRepaired>();
 				if (HatchDamageRules.CanBlowOpen(health, beingRepaired, locked, animating, seat.AirPressure, far.AirPressure, hatch.InteriorDesignPressure)
-					&& HatchDamageRules.RollBlowOpen(UnityRandomSource.Instance, HatchRuntime.BlowOpenChance, clock.CappedGameDt(HatchExchange.MaxFrameSeconds)))
+					&& HatchDamageRules.RollBlowOpen(UnityRandomSource.Instance, HatchRuntime.BlowOpenChance, clock))
 				{
 					HatchRuntime.SetLockedUnguarded(hatch, false);
 					locked = hatch.Locked;

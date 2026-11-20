@@ -6,6 +6,21 @@ namespace DamageControl.Tests
     public class LeakBlockRulesTests
     {
         [Fact]
+        public void BlockerLeavingPutsBackTheStatusOfARepairStillRunning()
+        {
+            // WS7: vanilla's blocker stop strips "is being repaired" whoever added it (P8 lets both share a target).
+            Assert.True(LeakBlockRules.RestoresRepairStatus(true, true, false));
+        }
+
+        [Fact]
+        public void BlockerLeavingLeavesTheStatusAloneOtherwise()
+        {
+            Assert.False(LeakBlockRules.RestoresRepairStatus(true, false, false)); // no repair left: vanilla's removal stands
+            Assert.False(LeakBlockRules.RestoresRepairStatus(true, true, true));   // still there: nothing to do
+            Assert.False(LeakBlockRules.RestoresRepairStatus(false, true, false)); // there was none
+        }
+
+        [Fact]
         public void BlockLeakHiddenWhenNoVisibleLeak()
         {
             // 02 §6 #16, first half.

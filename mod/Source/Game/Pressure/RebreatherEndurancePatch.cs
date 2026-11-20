@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Pressure;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core.Data;
 using UBOAT.Game.Scene.Items;
@@ -20,6 +21,11 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(Rebreather), "OnEquipped")]
 	internal static class RebreatherEndurancePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("RebreatherEndurance", ex);
+		}
+
 		private static void Postfix(Parameter ___durability)
 		{
 			try

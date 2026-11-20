@@ -8,13 +8,38 @@ namespace DamageControl.Core.Pressure
 	/// pressure; interaction slots are flagged underwater from the compartment's own water and from
 	/// any neighbouring compartment whose volume contains the slot.
 	///
-	/// Damage chances are stated per second (D7). The tick runs every <see cref="TickSeconds"/> of game
-	/// time, so the Game layer rolls them with <c>Probability.Roll(random, chance, TickSeconds)</c>.
+	/// Damage chances are stated per second (D7). The tick asks to run every <see cref="TickSeconds"/> of
+	/// game time; the Game layer rolls them over the time actually elapsed since the compartment's last
+	/// tick (<see cref="ElapsedSeconds"/>), which is longer under high compression.
 	/// </summary>
 	public static class CompartmentTick
 	{
 		/// <summary>Tick interval returned to the game's timed queue (vanilla uses 4 s).</summary>
 		public const float TickSeconds = 1f;
+
+		/// <summary>Game ticks per second (the game's clock counts 100 ns ticks).</summary>
+		public const double TicksPerSecond = 10000000.0;
+
+		/// <summary>
+		/// Longest span one tick integrates. Guards against a time skip or a long stall turning into one huge
+		/// roll; far above any frame at 64x.
+		/// </summary>
+		public const float MaxElapsedSeconds = 60f;
+
+		/// <summary>
+		/// Game seconds this tick covers. The game's timed queue runs a listener at most once per frame and
+		/// reschedules it from the current time, so above about 1 game second per frame (high compression) the
+		/// real interval is the frame, not <see cref="TickSeconds"/>; rolling for 1 s would lose the rest.
+		/// Returns <see cref="TickSeconds"/> on the first tick (<paramref name="previousTicks"/> &lt; 0) or when
+		/// the clock went backwards (a load), else the elapsed time clamped to [0, <see cref="MaxElapsedSeconds"/>].
+		/// </summary>
+		public static float ElapsedSeconds(long previousTicks, long nowTicks)
+		{
+			if (previousTicks < 0 || nowTicks < previousTicks)
+				return TickSeconds;
+			double seconds = (nowTicks - previousTicks) / TicksPerSecond;
+			return seconds > MaxElapsedSeconds ? MaxElapsedSeconds : (float)seconds;
+		}
 
 		/// <summary>A submerged bulb is at risk above this pressure (atm).</summary>
 		public const double BulbSubmergedRiskPressure = 4.0;

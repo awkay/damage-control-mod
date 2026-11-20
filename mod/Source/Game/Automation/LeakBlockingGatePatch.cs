@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Automation;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using DamageControl.Game.Settings;
 using HarmonyLib;
 using UBOAT.Game.Scene.Tasks;
@@ -15,6 +16,11 @@ namespace DamageControl.Game.Automation
 	[HarmonyPatch(typeof(LeakBlockingBySailors), "DoUpdate")]
 	internal static class LeakBlockingGatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("LeakBlockingGate", ex);
+		}
+
 		private static bool Prefix()
 		{
 			try

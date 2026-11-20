@@ -30,9 +30,14 @@ namespace DamageControl.Core.Repair
 		public const string DismantleDescription = DismantleKeyword + " Description";
 		public const string DismantleProgressing = DismantleKeyword + " Progressing Description";
 
-		/// <summary>Vanilla keywords whose English text this area overrides (04 §4.2: vanilla's two texts are swapped).</summary>
+		/// <summary>
+		/// Vanilla repair label keywords. Not overridden: their 2026.1 texts are swapped in most languages
+		/// (04 §4.2), but an English-only override would replace every translation with English (known issue).
+		/// </summary>
 		public const string RepairKeyword = "Repair";
 		public const string RepairRequiresPartsKeyword = "Repair (Requires Parts)";
+
+		/// <summary>Vanilla scrap tooltip, overridden because vanilla states 2:1. Names no ratio: the ratio is a tunable.</summary>
 		public const string ScrapDescription = "Scrap Description";
 
 		/// <summary>Vanilla warning reused when someone else is repairing the device ({0} = name).</summary>

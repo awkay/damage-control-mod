@@ -68,6 +68,39 @@ namespace DamageControl.Tests
             Assert.Equal(LeakStatusChange.None, HatchDamageRules.UpkeepLeak(1f, true, false, false));
         }
 
+        [Theory]
+        [InlineData(0.0333f, 1f, 32f)]
+        [InlineData(0.0333f, 1f, 64f)]
+        [InlineData(0.1f, 1f, 64f)]       // a slow frame at 64x: 6.4 game s
+        public void BlowOpenHazardIntegratesTheWholeFrameUnderCompression(float dt, float unityScale, float artificialScale)
+        {
+            // WS7: the frame is not capped at 0.5 s; the chance equals surviving each game second in turn.
+            var clock = new SimClock(dt, unityScale, artificialScale);
+            float p = HatchDamageRules.DefaultBlowOpenChancePerSecond;
+            double expected = 1.0 - System.Math.Pow(1.0 - p, clock.GameDt);
+            Assert.True(clock.GameDt > HatchExchange.MaxFrameSeconds); // the old cap would have dropped time here
+            Assert.Equal(expected, HatchDamageRules.BlowOpenChanceThisFrame(p, clock), 5);
+        }
+
+        [Fact]
+        public void BlowOpenHazardPerGameSecondIsTheSameAtOneTimesAndSixtyFourTimes()
+        {
+            float p = HatchDamageRules.DefaultBlowOpenChancePerSecond;
+            // 64 frames of 1/64 s at 1x against one frame of 1 game second at 64x: same survival chance.
+            double survive1x = System.Math.Pow(1.0 - HatchDamageRules.BlowOpenChanceThisFrame(p, new SimClock(1f / 64f, 1f, 1f)), 64);
+            double survive64x = 1.0 - HatchDamageRules.BlowOpenChanceThisFrame(p, new SimClock(1f / 64f, 1f, 64f));
+            Assert.Equal(survive1x, survive64x, 5);
+            Assert.Equal(0f, HatchDamageRules.BlowOpenChanceThisFrame(p, new SimClock(0f, 0f, 1f)));
+        }
+
+        [Fact]
+        public void BlowOpenRollUsesTheFrameChance()
+        {
+            var clock = new SimClock(0.0333f, 1f, 64f); // ~2.1 game s: chance ~0.95
+            Assert.True(HatchDamageRules.RollBlowOpen(new FixedRandom(0.9f), HatchDamageRules.DefaultBlowOpenChancePerSecond, clock));
+            Assert.False(HatchDamageRules.RollBlowOpen(new FixedRandom(0.99f), HatchDamageRules.DefaultBlowOpenChancePerSecond, clock));
+        }
+
         [Fact]
         public void DisabledHatchStaysShutOnlyWhileTheSeatSidePushesHarder()
         {

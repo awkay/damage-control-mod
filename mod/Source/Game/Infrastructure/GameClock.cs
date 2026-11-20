@@ -18,6 +18,15 @@ namespace DamageControl.Game.Infrastructure
 			get { return gameTime != null ? gameTime.ArtificialTimeScale : 1f; }
 		}
 
+		/// <summary>
+		/// The game clock in 100 ns ticks (GameTime.Ticks, the clock of the execution queue's normal timed
+		/// listeners, which advances with compression and stops while paused); -1 when GameTime is not available.
+		/// </summary>
+		public static long Ticks
+		{
+			get { return gameTime != null ? gameTime.Ticks : -1L; }
+		}
+
 		/// <summary>Timing for the current Update frame (Time.deltaTime).</summary>
 		public static SimClock Now()
 		{

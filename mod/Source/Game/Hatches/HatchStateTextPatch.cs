@@ -20,6 +20,11 @@ namespace DamageControl.Game.Hatches
 	[HarmonyPatch(typeof(Hatch), "GetStateText")]
 	internal static class HatchStateTextPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("HatchGetStateText", ex);
+		}
+
 		#pragma warning disable 0649 // assigned by the game's injection framework
 		[Inject]
 		private static Locale locale;

@@ -93,6 +93,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(SalvageReplacementParts), "GetState", new Type[] { typeof(GameActivator), typeof(PlayableCharacter), typeof(bool), typeof(bool), typeof(ActionContext) })]
 	internal static class SalvageStateRatioPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("SalvageStateRatio", ex);
+		}
+
 		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			return SalvageRuntime.Rewrite("GetState", instructions);
@@ -102,6 +107,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(SalvageReplacementParts), "GetActionProfit", new Type[] { typeof(GameActivator), typeof(PlayableCharacter) })]
 	internal static class SalvageProfitRatioPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("SalvageProfitRatio", ex);
+		}
+
 		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			return SalvageRuntime.Rewrite("GetActionProfit", instructions);
@@ -111,6 +121,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(SalvageReplacementParts), "UpdateAction")]
 	internal static class SalvageUpdateRatioPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("SalvageUpdateRatio", ex);
+		}
+
 		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			return SalvageRuntime.Rewrite("UpdateAction", instructions);

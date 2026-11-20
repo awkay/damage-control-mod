@@ -2,6 +2,7 @@ using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Hatches;
 using DamageControl.Core.Leaks;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core.Data;
 using UBOAT.Game.Scene.Characters;
@@ -26,6 +27,11 @@ namespace DamageControl.Game.Leaks
 	[HarmonyPatch(typeof(BlockLeakAction), "UpdateAction")]
 	internal static class BlockLeakUpdatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("BlockLeakUpdate", ex);
+		}
+
 		/// <summary>Name of the placeholder modifier (never attached to a stat).</summary>
 		internal const string PlaceholderName = "DC Hatch Seal";
 

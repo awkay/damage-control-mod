@@ -1,5 +1,6 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using DamageControl.Game.Settings;
 using HarmonyLib;
 using UBOAT.Game.Scene.Items;
@@ -16,6 +17,11 @@ namespace DamageControl.Game.Automation
 	[HarmonyPatch(typeof(AutoCarryWoundedToSafety), "DoUpdate")]
 	internal static class AutoCarryWoundedGatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("AutoCarryWoundedGate", ex);
+		}
+
 		/// <summary>Vanilla's own idle interval, in seconds.</summary>
 		private const float SkippedInterval = 2.5f;
 

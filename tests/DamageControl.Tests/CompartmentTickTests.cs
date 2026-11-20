@@ -102,6 +102,40 @@ namespace DamageControl.Tests
             Assert.False(CompartmentTick.IsSlotUnderwater(false, 1.4f, 0f, new[] { 0.2f, 1.5f }, 1));
         }
 
+        // ---- elapsed time per tick (WS7: the timed queue runs once per frame at most)
+
+        [Fact]
+        public void FirstTickAndClockResetCountOneTickInterval()
+        {
+            Assert.Equal(CompartmentTick.TickSeconds, CompartmentTick.ElapsedSeconds(-1, 50_000_000));
+            Assert.Equal(CompartmentTick.TickSeconds, CompartmentTick.ElapsedSeconds(90_000_000, 50_000_000));
+        }
+
+        [Theory]
+        [InlineData(10_000_000L, 1f)]      // 1x: one tick per game second
+        [InlineData(21_300_000L, 2.13f)]   // 64x at 30 fps: the tick can only run once per 2.13 s frame
+        [InlineData(0L, 0f)]
+        public void ElapsedIsTheGameTimeSinceThePreviousTick(long delta, float seconds)
+        {
+            Assert.Equal(seconds, CompartmentTick.ElapsedSeconds(1_000_000_000L, 1_000_000_000L + delta), 4);
+        }
+
+        [Fact]
+        public void ElapsedIsClampedAfterATimeSkip()
+        {
+            Assert.Equal(CompartmentTick.MaxElapsedSeconds, CompartmentTick.ElapsedSeconds(0, 36_000_000_000L));
+        }
+
+        [Fact]
+        public void DamageOddsPerGameSecondDoNotDependOnTheTickLength()
+        {
+            // Two 1 s ticks at 1x and one 2 s tick at 64x give the same chance of no damage.
+            float chance = CompartmentTick.OverstressDamageChance(0f);
+            double twoTicks = System.Math.Pow(1.0 - Probability.PerStep(chance, 1f), 2);
+            double oneTick = 1.0 - Probability.PerStep(chance, CompartmentTick.ElapsedSeconds(0, 20_000_000));
+            Assert.Equal(twoTicks, oneTick, 6);
+        }
+
         [Fact]
         public void UnbreathableAirPutsEverySlotUnderwater()
         {
