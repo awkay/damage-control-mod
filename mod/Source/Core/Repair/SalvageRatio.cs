@@ -12,8 +12,8 @@ namespace DamageControl.Core.Repair
 	/// </summary>
 	public static class SalvageRatio
 	{
-		/// <summary>The mod's ratio (Q9: a constant with one named setting).</summary>
-		public const float DefaultScrapPerPart = 4f;
+		/// <summary>The mod's default ratio: the game's own 2 (maintainer decision 2026-11-20); tunable via a data row.</summary>
+		public const float DefaultScrapPerPart = 2f;
 
 		/// <summary>The 2026.1 vanilla ratio, which is also the constant the transpiler looks for.</summary>
 		public const float VanillaScrapPerPart = 2f;

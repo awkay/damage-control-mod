@@ -382,9 +382,7 @@ when you are sure the other side is safe. The exterior hatch is never closed thi
 
 #### Salvaging parts costs more scrap
 
-At the workshop, **salvaging one replacement part now costs 4 scrap** instead of the base game's 2. The
-order still takes about 100 seconds per part at normal speed. It needs at least 4 scrap to start and
-ends when fewer than 4 are left. The scrap item's tooltip no longer states a ratio.
+Salvaging replacement parts at the workshop works as in the base game: an Engineer turns **2 scrap into one part**, about 100 seconds per part at normal speed. The ratio is a tunable (`Salvage Scrap Per Part`) if you want salvage to be harsher.
 
 If a game update changes the salvage code so that the mod cannot apply its ratio safely, it leaves the
 game's 2:1 in force and writes a warning to the log.
@@ -422,7 +420,7 @@ Each row has a name in the first column and its value in **Value**.
 | `Hatch Flow Rate` | `2` | Speed of air and water flow through hatches. 2 matches the base game's water flow through an open hatch. Wrecked-hatch leaks scale with it. Does not affect Equalize Pressure. |
 | `Hatch Blow Open Chance` | `0.75` | Chance per second (0 to 1) that a wrecked hatch under enough pressure blows open. |
 | `Hatch Slot Interaction Types` | `True` | Also changes which animation crew use at hatches. Set `False` if crew look wrong when working hatches; the water limits still apply. |
-| `Salvage Scrap Per Part` | `4` | Scrap per replacement part at the workshop. The base game uses 2. At least 1. |
+| `Salvage Scrap Per Part` | `2` | Scrap per replacement part at the workshop (the base game's value). At least 1. |
 | `Exhaust Blow Flow Per Revolution` | `0.1933768` | Exhaust led into the ballast per diesel revolution. Higher blows faster. |
 | `Exhaust Blow Stage 2 Water Threshold` | `5` | The middle tanks join once both end tanks hold less water than this. |
 | `Exhaust Blow Completion Water` | `0.05` | The blow counts as finished when this little water is left in the ballast in total. |
@@ -470,8 +468,7 @@ rebuild the sheets; see [`DEVELOPMENT.md`](DEVELOPMENT.md).
 - **Swapped Repair labels.** In 2026.1 the base game's "Repair" and "Repair (requires parts)" wheel
   labels are swapped in English and most other languages. This is a base-game issue. The mod leaves it
   alone, because fixing it in English only would replace all the other translations with English.
-- **English only.** All of the mod's own text is English, in every game language. That includes the
-  scrap tooltip, which the mod rewrites because the original text states the 2:1 ratio.
+- **English only.** All of the mod's own text is English, in every game language.
 - **Placeholder icons.** The icons for the mod's orders are simple placeholders.
 - **Water rarely locks hatches on its own** at the default threshold (about 9 m of level difference is
   needed); air pressure differences are what usually trigger the lock.
@@ -518,7 +515,7 @@ Every line from the mod starts with `[Damage Control]`. Search the file for `Dam
 | `carry wounded: order given; ...` | You used "Carry the wounded to their bunks". |
 | `boat layout unknown: ...` / `... disabled: boat layout unknown` | The mod did not recognise the boat's layout, so the named feature is off. Please report it with the boat type. |
 | `conning tower compartment not found ...` / `diesel compartment not found ...` | Venting or diesel air draw is off on this boat. Please report it. |
-| `salvage ratio: the game's salvage code did not match; keeping the vanilla 2 scrap per part` | The 4:1 salvage change could not be applied; the game's 2:1 applies. |
+| `salvage ratio: the game's salvage code did not match; keeping the vanilla 2 scrap per part` | A tuned salvage ratio could not be applied; the game's 2:1 applies. |
 | `data row ... has "...", expected ...; using ...` | A tunable you edited could not be read; its default is used. |
 
 With `Debug` set to `True` you get many more lines, mostly describing individual events (a hatch kept

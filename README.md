@@ -62,7 +62,7 @@ saved with the campaign and take effect at once.
 
 Advanced numbers live in the mod's data rows under `General/Settings/Damage Control`, in
 `data/<area>/*.json`. Examples are `Hatch Lock Threshold` (0.9 atm), `Hatch Flow Rate` (2),
-`Hatch Blow Open Chance` (0.75 per second), `Salvage Scrap Per Part` (4), the `Exhaust Blow ...` rows,
+`Hatch Blow Open Chance` (0.75 per second), `Salvage Scrap Per Part` (2, the game default), the `Exhaust Blow ...` rows,
 and `Debug` (False). Debug adds extra log lines and `[DC]` diagnostics on the hatch panel.
 
 ## Relationship to Iron Coffins

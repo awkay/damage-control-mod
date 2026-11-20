@@ -56,11 +56,9 @@ namespace DamageControl.Tests
         }
 
         [Fact]
-        public void ScrapDescriptionNamesNoRatioBecauseTheRatioIsTunable()
+        public void ScrapDescriptionIsLeftToTheGameSoItsTranslationsSurvive()
         {
-            string text = RepoData.English(RepairText.ItemsSheet, RepairText.ScrapDescription);
-            Assert.False(string.IsNullOrWhiteSpace(text));
-            Assert.DoesNotMatch("[0-9]", text);
+            Assert.Null(RepoData.English(RepairText.ItemsSheet, RepairText.ScrapDescription));
         }
 
         [Fact]

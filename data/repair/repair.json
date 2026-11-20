@@ -9,15 +9,12 @@
       }
     ],
     "General/Settings/Damage Control": [
-      { "key": "Salvage Scrap Per Part", "Value": "4", "$comment": "R5, Q9: scrap the workshop salvage order turns into one replacement part (vanilla 2). Falls back to vanilla if the game's salvage code changed shape." }
+      { "key": "Salvage Scrap Per Part", "Value": "2", "$comment": "R5, Q9: scrap the workshop salvage order turns into one replacement part (vanilla 2). Falls back to vanilla if the game's salvage code changed shape." }
     ],
     "Locales/Activators": [
       { "key": "DC Dismantle", "English": "Dismantle for scrap" },
       { "key": "DC Dismantle Description", "English": "Strip this equipment down for scrap metal. It is left broken, and putting it back into service from nothing may cost a spare part. Yields one piece of scrap, two for a thrifty engineer." },
       { "key": "DC Dismantle Progressing Description", "English": "Taking the equipment apart for scrap" }
-    ],
-    "Locales/Items": [
-      { "key": "Scrap Description", "English": "Engineers at the workshop can salvage spare parts from scrap metal.", "$comment": "Overrides vanilla, whose text states 2:1 in every language. No number here: the ratio is the Salvage Scrap Per Part tunable. Blank languages fall back to this English (known issue, README)." }
     ]
   }
 }

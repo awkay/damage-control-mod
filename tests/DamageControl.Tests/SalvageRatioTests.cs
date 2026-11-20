@@ -5,15 +5,15 @@ namespace DamageControl.Tests
 {
     public class SalvageRatioTests
     {
-        // ---- 04 §8 #7: 4 scrap : 1 part
+        // ---- 04 §8 #7: salvage ratio (default is the game's 2 scrap : 1 part; tests below use an explicit 4 to exercise a tuned ratio)
 
         [Theory]
         [InlineData(0f, false)]
-        [InlineData(3f, false)]
-        [InlineData(3.99f, false)]
-        [InlineData(4f, true)]
+        [InlineData(1f, false)]
+        [InlineData(1.99f, false)]
+        [InlineData(2f, true)]
         [InlineData(9f, true)]
-        public void Criterion7_DisabledBelowFourScrap(float scrap, bool enabled)
+        public void Criterion7_DisabledBelowTwoScrapAtTheDefault(float scrap, bool enabled)
         {
             Assert.Equal(enabled, SalvageRatio.HasEnoughScrap(scrap, SalvageRatio.Effective(true, SalvageRatio.DefaultScrapPerPart)));
         }
@@ -56,10 +56,10 @@ namespace DamageControl.Tests
         [InlineData(4f, 4f)]
         [InlineData(6f, 6f)]
         [InlineData(1f, 1f)]
-        [InlineData(0.5f, 4f)]
-        [InlineData(-2f, 4f)]
-        [InlineData(float.NaN, 4f)]
-        [InlineData(float.PositiveInfinity, 4f)]
+        [InlineData(0.5f, 2f)]
+        [InlineData(-2f, 2f)]
+        [InlineData(float.NaN, 2f)]
+        [InlineData(float.PositiveInfinity, 2f)]
         public void ConfiguredRatioIsSanitized(float configured, float expected)
         {
             Assert.Equal(expected, SalvageRatio.Sanitize(configured));
