@@ -5,7 +5,9 @@ Stdlib only. Usage:
     python3 tools/placeholder-icons/make_icons.py OUT_DIR GLYPH:BADGE:"Icon Name" ...
 
 GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust, dismantle.
-BADGE is one of: none, on, off (a tick or a slash in the lower-right corner).
+BADGE is one of: none, on, off (a tick or a slash overlapping the glyph's lower-right).
+Glyphs are centred by bounding box and badges kept off the canvas edge, because the game's
+wheel draws icons larger than their segment. Regenerate every shipped icon with ./regen.
 For each icon it writes "<Icon Name>.png" (white) and "<Icon Name> (Highlighted).png" (amber);
 with --disabled (anywhere in the arguments) also "<Icon Name> (Disabled).png" (grey).
 All art is generated geometry; nothing is copied from any other mod or game.
@@ -79,6 +81,47 @@ BADGES = {
     "off": lambda: union(ring(106, 104, 16, 6), line(95, 115, 117, 93, 6)),
 }
 
+# Layout. The game's interaction wheel draws an icon larger than its segment, so anything near the
+# canvas edge spills into the neighbouring segment. Glyphs are therefore centred on the canvas by
+# their own bounding box and scaled to fit GLYPH_EXTENT; the badge sits inside the canvas, overlapping
+# the glyph's lower-right, never near the edge.
+CENTER = SIZE / 2.0
+GLYPH_EXTENT = 84.0        # max glyph width/height in px when there is no badge
+GLYPH_EXTENT_BADGED = 72.0 # leaves room for the badge
+BADGE_CENTER = (90.0, 90.0)
+BADGE_SCALE = 0.8
+BADGE_SOURCE_CENTER = (106.0, 104.0)  # where the BADGES shapes are drawn
+
+def bbox(shape, step=1.0):
+    xs, ys = [], []
+    y = 0.5
+    while y < SIZE:
+        x = 0.5
+        while x < SIZE:
+            if shape(x, y):
+                xs.append(x); ys.append(y)
+            x += step
+        y += step
+    return min(xs), min(ys), max(xs), max(ys)
+
+def fit(shape, extent):
+    x0, y0, x1, y1 = bbox(shape)
+    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+    s = extent / max(x1 - x0, y1 - y0)
+    return lambda x, y: shape(cx + (x - CENTER) / s, cy + (y - CENTER) / s)
+
+def place_badge(shape):
+    bx, by = BADGE_SOURCE_CENTER
+    tx, ty = BADGE_CENTER
+    return lambda x, y: shape(bx + (x - tx) / BADGE_SCALE, by + (y - ty) / BADGE_SCALE)
+
+def compose(glyph, badge):
+    g = GLYPHS[glyph]()
+    b = BADGES[badge]
+    if b is None:
+        return fit(g, GLYPH_EXTENT)
+    return union(fit(g, GLYPH_EXTENT_BADGED), place_badge(b()))
+
 def render(shape, rgb):
     rows = []
     n = SS * SS
@@ -112,10 +155,7 @@ def main(argv):
         variants.append((" (Disabled)", (128, 128, 128)))
     for spec in argv[2:]:
         glyph, badge, name = spec.split(":", 2)
-        shape = GLYPHS[glyph]()
-        b = BADGES[badge]
-        if b is not None:
-            shape = union(shape, b())
+        shape = compose(glyph, badge)
         for suffix, rgb in variants:
             path = os.path.join(out, name + suffix + ".png")
             with open(path, "wb") as f:
