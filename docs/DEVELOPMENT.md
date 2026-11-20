@@ -375,8 +375,8 @@ H3. **Repair hold (C10).** With blocking **off**, order a repair on a damaged cl
     the repair status shows, Open is disabled; after the repair it opens normally.
 H4. **Open-hatch exchange (02 §6 #24).** Open a hatch between a flooded and a dry room. Water levels move
     toward each other, the jet particles play on the receiving side only, and they stop at equilibrium.
-    Note how fast it is: per D1, head-driven flow is a tenth of the 2022.1 original's. If it feels too slow,
-    tune `Hatch Flow Rate` (default 2) and record the value.
+    It should drain at vanilla's speed: the default `Hatch Flow Rate` 2 matches vanilla 2026.1's open-hatch
+    rate (2 m3/s per metre of level difference at 1x). If it feels off, tune that row and record the value.
 H5. **Air through open hatches.** With debug lines on, open a hatch between rooms at different air
     pressures (e.g. the diesel room after a submerged diesel run, WS1): both `p` values converge within a
     few seconds without oscillating.

@@ -50,12 +50,29 @@ Rules for owners:
 `WaterHead.SidePressure(airPressure, waterElevation, referenceY) = p + 0.1 × max(0, WE - referenceY)`.
 Every hatch rule, the panel and equalize use it. Anything else that mixes water head into pressure should too.
 
+Open-hatch water rate (vanilla parity): the passage profile multiplies the 02 §2.3g driving term by
+`HatchExchange.PassageWaterGain = 1 / AtmPerMetreOfWater = 10`, i.e. it moves the driving term in metres
+of head × step. At equal air pressure a level difference of h m above the sill then moves `h × s`,
+which is vanilla 2026.1's own open-hatch rate (same k = 2 and 2/sqrt(S) damping). An air-pressure
+difference drives like its equivalent head (1 atm = 10 m); vanilla has none. Remaining differences from
+vanilla, all spec-defined: the `(1.01 - fill)²` inflow choke near a full receiver. Closed, leaking
+hatches pass 2 % × seal factor of the converted open rate.
+
+Substeps (C2 note): the hatch patch does not drop game time above the 0.5 s cap.
+`HatchExchange.Substeps(clock, rate)` takes the frame's whole `game dt × damped rate`, clamps it at
+`MaxFrameTotalStep` = 8 (vanilla's own per-frame clamp), and splits it into `ceil(dt / 0.5 s)` equal
+substeps, at most `MaxSubsteps` = 16 (only reached past 8 game seconds per frame, where a substep is still
+≤ 0.5, below the 1x half-second step of 1.0). The patch runs the whole exchange (air, water, leaks, both
+passages) once per substep, re-reading both compartments each time, so the air floor, the
+no-equalization-overshoot guard and the no-overfill guard hold per substep. Frame totals match vanilla at
+any compression. `FrameStep` (one capped step) remains for the equalize action. Equalize keeps gain 1 (01 §2.11). The vertical passage is unchanged.
+
 ## 3. Hatch rules and kernel (Core)
 
 | Type | Use |
 |---|---|
 | `HatchLockRule.CanBeOpened(HatchLockInput)`, `DefaultThreshold` 0.9, `DeckDepthLimit` 2.5 | 02 §2.1 steps 1 to 6 |
-| `HatchExchange.FrameStep(SimClock, rate)`, `EqualizeStep`, `GatedStep`, `Horizontal`, `Vertical`, `Equalize`, `Exchange(..., ExchangeProfile, step)` | the exchange kernel (02 §2.3, 01 §2.11). `HatchFlow` amounts are positive left to right. |
+| `HatchExchange.Substeps(SimClock, rate)` → `FrameSubsteps`, `FrameStep(SimClock, rate)`, `EqualizeStep`, `GatedStep`, `Horizontal`, `Vertical`, `Equalize`, `Exchange(..., ExchangeProfile, step)` | the exchange kernel (02 §2.3, 01 §2.11). `HatchFlow` amounts are positive left to right. |
 | `HatchSide`, `HatchSide.Create(p, air, water, capacity, we, floor)` | one compartment as plain values |
 | `HatchDamageRules.CanBlowOpen`, `RollBlowOpen`, `UpkeepLeak`, `StaysShutWhenDisabled` | H5, H3 |
 | `HatchPanel.Build(HatchPanelInput, HatchPanelText)`, `Classify`, `ViewerFarSideIsRight` | H6 |
@@ -85,7 +102,7 @@ Every hatch rule, the panel and equalize use it. Anything else that mixes water 
 | Row | Default | Meaning |
 |---|---|---|
 | `Hatch Lock Threshold` | 0.9 | atm by which the seat side (air + 0.1 atm per m of water above lowY) may exceed the far side before the hatch locks (D1) |
-| `Hatch Flow Rate` | 2 | base exchange rate k through hatches at 1x (02 §2.3b). With D1 units, head-driven water flow is a tenth of the original's; raise this to retune |
+| `Hatch Flow Rate` | 2 | base exchange rate k through hatches at 1x (02 §2.3b), a multiplier on air and water. 2 gives vanilla 2026.1 parity for open-hatch water flow (see §2); closed leaks stay 2 % of it |
 | `Hatch Blow Open Chance` | 0.75 | per-second chance a destroyed hatch blows open under over-pressure (D7) |
 
 Read once per campaign session (and on first use).

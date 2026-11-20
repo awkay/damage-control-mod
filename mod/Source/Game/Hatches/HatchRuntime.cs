@@ -32,7 +32,7 @@ namespace DamageControl.Game.Hatches
 			}
 		}
 
-		/// <summary>Base exchange rate k (data row "Hatch Flow Rate", default 2).</summary>
+		/// <summary>Base exchange rate k (data row "Hatch Flow Rate", default 2 = vanilla 2026.1's open-hatch water rate).</summary>
 		public static float FlowRate
 		{
 			get

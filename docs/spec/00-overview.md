@@ -206,7 +206,7 @@ The exact 2026.1 hook point and import settings are a WS0 task, recorded in
 | # | Where | Conflict | Resolution |
 |---|---|---|---|
 | C1 | 01 §2.11 water step, §7.5; 02 §2.1, §2.3g, §2.4, §7.1 | Water head is added to atm 1:1 in logic, but the panel divides by 10 | **Decision D1.** Whichever unit is chosen applies everywhere through `AtmPerMetreOfWater`. Logic and panel must agree. |
-| C2 | 01 §2.11 (Unity frame delta, Unity time scale); 02 §2.3b ("game time scale"); 03 (scaled delta) | Different time bases | Use `SimClock` (§2.1 rule 5) everywhere. Keep each spec's caps (0.5 s per frame) and its `2/sqrt(S)` damping, with S = effective compression. |
+| C2 | 01 §2.11 (Unity frame delta, Unity time scale); 02 §2.3b ("game time scale"); 03 (scaled delta) | Different time bases | Use `SimClock` (§2.1 rule 5) everywhere. Keep each spec's caps (0.5 s per frame) and its `2/sqrt(S)` damping, with S = effective compression. Note (WS2): the hatch exchange keeps the 0.5 s bound per kernel step but integrates the whole frame in substeps of at most 0.5 s (total clamped at vanilla's 8), so no flow is lost under compression (WS2-API §2). |
 | C3 | 01 §2.11 vs 02 §2.3 | Two copies of the air/water exchange: different rate constants (0.2/s vs 2/s, air cap 50k vs 10s) and world heights 102/100 vs hatch `highY`/`lowY` | One kernel owned by 02. Equalize keeps its own rate constants as parameters but uses **`highY` as vent height and `lowY` as valve height** instead of world 102/100. |
 | C4 | 01 §4, 02 §4, 03 §4 vs 04 §3 | Proper save data vs the energy-gain modifier trick | Use the background-task settings store (R9). The modifier trick is not used. 04 §3 is edited. |
 | C5 | 02 §4, 03 §4 | Auto leak-blocking and auto-carry default **Off** | **Decision D3.** |
