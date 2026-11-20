@@ -1,0 +1,12 @@
+{
+  "$comment": "WS3 rows: the 'carry the wounded now' order on the light switch (H13) and its text.",
+  "tables": {
+    "Crew/Actions": [
+      { "key": "DCCarryWoundedNow", "Type": "DamageControl.Game.Automation.CarryWoundedNowAction", "Activator Tags": "Light Switch", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter" }
+    ],
+    "Locales/Activators": [
+      { "key": "DC Carry Wounded Now", "English": "Carry the wounded to their bunks" },
+      { "key": "DC Carry Wounded Now Description", "English": "Free crewmen pick up everyone lying injured and take them to a bunk. Once nobody is left on the deck plates they go back to waiting for orders." }
+    ]
+  }
+}
