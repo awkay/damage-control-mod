@@ -4,7 +4,7 @@
     "Crew/Actions": [
       {
         "key": "DCDismantleForParts", "Type": "DamageControl.Game.Repair.DismantleAction",
-        "Activator Tags": "Compartment Hatch, Engines, Compressor, Trim Pump, Valves, Depth Steers Station, Ventillation, Power Distribution Board Bow, Power Distribution Board Stern, Radio Room, Listening Room, Gyrocompass, Torpedo Launcher, Deck Gun, Flak, Pill Thrower, Targeting Sight, Periscope",
+        "Activator Tags": "Compartment Hatch, Compressor, Deck Gun, Depth Steers Station, Engines, Flak, Gyrocompass, Listening Room, Periscope, Pill Thrower, Power Distribution Board Bow, Power Distribution Board Stern, Radio Room, Targeting Sight, Torpedo Launcher, Trim Pump, Valves, Ventillation",
         "Character Tags": "Engineer", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue", "Group": "Engineer", "Subgroup": ""
       }
     ],

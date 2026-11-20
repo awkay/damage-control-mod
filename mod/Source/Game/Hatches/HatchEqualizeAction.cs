@@ -20,14 +20,14 @@ namespace DamageControl.Game.Hatches
 	/// its own.
 	/// </summary>
 	[Serializable]
-	public class EqualizePressureAction : DeviceUseAction
+	public class HatchEqualizeAction : DeviceUseAction
 	{
-		public EqualizePressureAction(GameDataRow data)
+		public HatchEqualizeAction(GameDataRow data)
 			: base(data)
 		{
 		}
 
-		public EqualizePressureAction(EqualizePressureAction source, GameActivator activator)
+		public HatchEqualizeAction(HatchEqualizeAction source, GameActivator activator)
 			: base(source, activator)
 		{
 		}
@@ -61,7 +61,7 @@ namespace DamageControl.Game.Hatches
 			}
 			catch (Exception e)
 			{
-				DcLog.Exception("EqualizePressureAction.GetState", e);
+				DcLog.Exception("HatchEqualizeAction.GetState", e);
 				return ActionState.Hidden;
 			}
 		}
@@ -90,7 +90,7 @@ namespace DamageControl.Game.Hatches
 			}
 			catch (Exception e)
 			{
-				DcLog.Exception("EqualizePressureAction.UpdateAction", e);
+				DcLog.Exception("HatchEqualizeAction.UpdateAction", e);
 			}
 			base.UpdateAction();
 		}

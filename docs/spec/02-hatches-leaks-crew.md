@@ -146,8 +146,8 @@ flooding, buoyancy and trim (ballast/depth spec).
   3. Far-side ("closing side") pressure, same formula. Each value coloured red if > 2.0 atm,
      blue if < 0.8 atm, otherwise white/neutral.
   4. Blank line, then: if health > 0, the game's existing "hatch design pressure durability"
-     text with the hatch's interior design pressure; else a red warning that the hatch is badly
-     damaged, will leak, and its locks probably won't hold more than a few atmospheres.
+     text with the hatch's interior design pressure; else a red warning (meaning: the hatch is wrecked, lets water
+     through, and cannot be trusted under pressure).
   5. One green line per leak-block modifier on the hatch saying it is partially sealed and
      leakage is much reduced (should be shown once; §7 Q6).
   6. Debug diagnostics (capacity/water/air/water elevation/opening heights) — the original

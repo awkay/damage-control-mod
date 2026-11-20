@@ -428,7 +428,7 @@ blocking label and its effect, a sailor reduces inflow by a percentage);
 hatch action); `Activators/Replacement Parts` (label for the parts item when
 shown as an activator/sprite name); new labels for: equalize pressure between
 compartments, carry wounded to beds, block leak by regular sailor, adjust
-ballast for deck awash, blow ballast using diesel exhaust, pump water to
+ballast for deck awash, the Exhaust Blow order, pump water to
 control room, and a "main pump" description stating the feature is
 unfinished. The settings toggles' enable/disable labels are referenced by
 code but have no locale rows in the original (they render as raw keys) — ours
@@ -454,7 +454,7 @@ action's localization keyword. Categories (one PNG per action label):
 Icons in this area: **Dismantle** has the full set (wheel ×3, actions,
 cursor, banner, portrait). Repair and Salvage use vanilla icons (vanilla keys).
 Other icons in the bundle belong to other specs: equalize pressure (full set),
-blow ballast with diesel exhaust (full set), adjust ballast for deck awash
+Exhaust Blow (full set), adjust ballast for deck awash
 (full set), pump water to control room (wheel ×3), carry wounded to beds
 (wheel ×3), block leak / block leak by sailor (wheel), keep hatches
 closed / leave hatches open (wheel), and enable/disable icons for the three

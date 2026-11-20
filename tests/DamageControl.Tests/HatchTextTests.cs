@@ -33,7 +33,7 @@ namespace DamageControl.Tests
         public void EqualizeRowIsOnHatchesWithNormalQueueAndNoCharacter()
         {
             // 01 §3 #16: activator tag Hatch, contexts Normal, Queue, NoCharacter.
-            var row = RepoData.Rows("Crew/Actions").Single(r => r["Type"] == "DamageControl.Game.Hatches.EqualizePressureAction");
+            var row = RepoData.Rows("Crew/Actions").Single(r => r["Type"] == "DamageControl.Game.Hatches.HatchEqualizeAction");
             Assert.Equal("Hatch", row["Activator Tags"]);
             var contexts = row["Contexts"].Split(',').Select(s => s.Trim()).ToArray();
             Assert.Equal(new[] { "Normal", "Queue", "NoCharacter" }, contexts);

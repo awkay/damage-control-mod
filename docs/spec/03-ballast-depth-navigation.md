@@ -63,7 +63,7 @@ Architect note (00 D5, C32): v1 uses **no** sentinels. They would collide with 2
 `DepthPreset.DeckAwash` and with the controller's target-depth checks. This section remains the
 owner of ballast intent, which is implemented later as explicit saved state (00 B1).
 
-### A. *Exhaust Blow*: blow ballast with diesel exhaust
+### A. *Exhaust Blow*: emptying ballast tanks using the diesel's exhaust
 
 - **Performer:** any crew member (no character tag requirement). It is queued on the activator
   of the flooding-and-blowing valve station, which carries the activator tag "Valves" and sits
@@ -405,7 +405,7 @@ types, and each mapping must be data-driven or looked up per boat.
 ## 5. UI
 
 - **Interaction wheel at the valve station:** two new entries:
-  - *Exhaust Blow*: a label meaning "blow ballast with diesel exhaust".
+  - *Exhaust Blow*: a short label naming the exhaust-driven blow order.
   - *Awash Trim*: a label meaning "trim ballast for deck awash".
 - **Icons needed for each of the two actions:** these are new art, described only:
   - wheel icon: normal, highlighted and disabled

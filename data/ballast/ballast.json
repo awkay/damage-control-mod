@@ -13,7 +13,7 @@
       { "key": "Exhaust Blow Cancel Grace Seconds", "Value": "3", "$comment": "A running blow is cancelled after the diesel or deck gate has failed this long without a break (game seconds)." }
     ],
     "Locales/Activators": [
-      { "key": "DC Exhaust Blow", "English": "Blow ballast with diesel exhaust" },
+      { "key": "DC Exhaust Blow", "English": "Exhaust blow (diesel)" },
       { "key": "DC Exhaust Blow Description", "English": "Lead the running diesel's exhaust into the main ballast tanks and drive the rest of the water out. Saves the compressed-air bottles. Only works on the surface with the diesel running; the faster it turns, the faster the tanks empty." },
       { "key": "DC Exhaust Blow Progressing Description", "English": "Emptying the ballast tanks with diesel exhaust" }
     ],

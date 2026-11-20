@@ -59,10 +59,10 @@ namespace DamageControl.Core.Repair
 		/// <summary>Activator tags the dismantle order is offered on (04 §2.3, game spelling, "Ventillation" included).</summary>
 		public static readonly string[] DismantleActivatorTags =
 		{
-			"Compartment Hatch", "Engines", "Compressor", "Trim Pump", "Valves", "Depth Steers Station",
-			"Ventillation", "Power Distribution Board Bow", "Power Distribution Board Stern", "Radio Room",
-			"Listening Room", "Gyrocompass", "Torpedo Launcher", "Deck Gun", "Flak", "Pill Thrower",
-			"Targeting Sight", "Periscope",
+			"Compartment Hatch", "Compressor", "Deck Gun", "Depth Steers Station", "Engines", "Flak",
+			"Gyrocompass", "Listening Room", "Periscope", "Pill Thrower", "Power Distribution Board Bow",
+			"Power Distribution Board Stern", "Radio Room", "Targeting Sight", "Torpedo Launcher",
+			"Trim Pump", "Valves", "Ventillation",
 		};
 	}
 }

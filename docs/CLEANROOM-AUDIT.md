@@ -223,3 +223,12 @@ Five low-risk non-benign items remain:
 
 Doing F1, F3 and F4 removes every trace of the original's wording and invented naming from shipped
 files. F5 and F6 are defensible as functional parameters.
+
+## Resolution (2026-11-19)
+
+- F1: renamed to `HatchEqualizeAction` (class, data row type, test).
+- F3: damaged-hatch warning rewritten from scratch; spec 02 now describes its meaning only.
+- F4: label changed to "Exhaust blow (diesel)"; spec phrasing replaced in 03 and 04.
+- F5: dismantle tag list reordered alphabetically (data and Core constant).
+- F6: kept. The specs contain formulas and behavior only, which docs/CLEANROOM.md permits.
+- `__pycache__/` is now git-ignored.
