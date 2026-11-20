@@ -848,7 +848,23 @@ whole session. Lookup types in the 2026.1 UI: wheel, `Actions`, `Actions (Banner
   private `long` game-tick fields (0 = not running); the pump uses `pumpDelay` with `PumpTurnOffDelay`
   (55 s on the vanilla `General/Background Tasks` row).
 - **`Interactable`.** Private `maxCharacters` (initial, also the clamp of the `MaxCharacters` setter) and
-  `maxCharactersCurrent`; nothing in the game sets `MaxCharacters`. Sibling-slot exclusion is
-  `InteractableSlot.DisabledSlots` plus `AddDisableReason/RemoveDisableReason(slot)`, applied on `Reserve`.
+  `maxCharactersCurrent`; nothing in the game sets `MaxCharacters`. Both are saved with the game (the
+  game-state serializer takes every non-static field without `[NonSerialized]`/`[NonSerializedInGameState]`).
+  Sibling-slot exclusion is `InteractableSlot.DisabledSlots` plus `AddDisableReason/RemoveDisableReason(slot)`,
+  applied on `Reserve` (when the crewman sets off), lifted on `FreeReservation`.
+- **Two crewmen on one target (P8).** An `InteractableSlot` holds one character; the interactable's maximum
+  is not consulted by the wheel. It only feeds `BlockLeakAction.UpdateAction`'s crowding cancel, the
+  `MaxCharacters == 1` rules of `RepairAction.GetState` (AI only) and `BlockLeakAction.StartMainCharacter`,
+  reservations of `Work` slots and the `Sum`/`HalfSum` performance modes (divided by `maxCharacters`).
+  - `BlockLeakAction.GetState` checks only the visible leak and `CheckDefaultStateConditions` (busy, soft
+    requirements): no slot check, so "Block leak" is always offered; `GetLocalizedWarnings` adds "used by
+    somebody else" when no `Block Leak`/`Default` slot is free.
+  - `BlockLeakAction.StartMainCharacter` first calls `StopCurrentAction()` on **every** other user of the
+    activator whose action is a `BlockLeakAction`, so a second blocker always replaced the first.
+  - `RepairAction.GetState` needs a free, enabled, reachable `Repair`/`Default` slot
+    (`CheckInteractableUseConditions`), and is disabled while another crewman repairs.
+  - `DeviceUseAction.UseDevice` walks to `GetClosestSlot(tag, "Default", ...)` among free slots; with none it
+    calls `CompleteAction()` and the crewman does nothing.
+  - `Activator.Users` is the live list; a starting character is added only after `StartCharacter` returns.
 - **Light switch.** `LightSwitch` equipment; vanilla `Crew/Actions` rows use activator tag `Light Switch`.
 - **Orders list.** The 2026.1 hook for "not shown in the orders list" is `CharacterAction.ShowInTabMenuForActivator`.

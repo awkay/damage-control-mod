@@ -51,7 +51,8 @@ Columns:
 | `BlockLeakAction.GetState(Activator, PlayableCharacter)` | `BlockLeakStatePatch` | WS3 | postfix | | - | H8: hide "Block leak" on open hatches and slotless hatches. |
 | `BlockLeakAction.UpdateAction` | `BlockLeakUpdatePatch` | WS3 | prefix, skips original only when the leak is null | | - | H8/C28: hatch targets bypass vanilla's leakable cast, hold a blocker seal, and cancel on an open hatch. |
 | `BlockLeakAction.StopMainCharacter` | `BlockLeakStopPatch` | WS3 | prefix + postfix | | - | H8: release seals. WS7: put back a running repair's "is being repaired" status that vanilla's stop removed. |
-| `Interactable.OnSlotInteractionChanged` (private) | `SlotCrowdingPatch` | WS3 | postfix, writes private `maxCharacters`/`maxCharactersCurrent` | | - | P8: holes, pipes and hatches take two characters. |
+| `BlockLeakAction.StartMainCharacter` | `BlockLeakStartPatch` | WS3 | prefix + finalizer; widens the target (private fields through `AccessTools.FieldRefAccess`) and hides kept blockers from `Activator.Users` during vanilla's start | | - | P8: a second blocker joins the first instead of replacing him; at most two at the leak. |
+| `Interactable.OnSlotInteractionChanged` (private) | `SlotCrowdingPatch` | WS3 | postfix, writes private `maxCharacters`/`maxCharactersCurrent` | | - | P8 backstop: leaking holes, pipes and hatches without crew work slots take two characters. |
 | `LeakBlockingBySailors.DoUpdate` (private) | `LeakBlockingGatePatch` | WS3 | prefix, skips original when off | | - | H12 gate. Outside a campaign the setting reads its default (on), so vanilla runs. |
 | `AutoCarryWoundedToSafety.DoUpdate` (private) | `AutoCarryWoundedGatePatch` | WS3 | prefix, skips original (returns 2.5 s) | | - | H13 gate. Never skips while a diver waits (C27). |
 | `AutomaticActionsController.DoUpdate` (private) | `TrimPumpLeakHoldPatch` | WS3 | prefix + postfix, writes private `pumpDelay` | | - | H14: no trim-pump auto-off while anything leaks. |
@@ -59,21 +60,23 @@ Columns:
 | `NavMeshDoors.TraverseStart` | `DoorTraversePatch` | WS4 | prefix | | G | B10: cancel orders at a door the mod holds shut (00 C33). Never for evacuating crew or crew leaving the deck on a dive. |
 | `NavMeshLadder.TraverseStart` | `LadderTraversePatch` | WS4 | prefix | | G | B10: same for ladder hatches; also never for a climber already on the ladder's queue (reads private `navigators`). The exterior hatch is exempt. |
 | `EvacuateToSafetyAction.Escape` (private) | `EvacuationCancelPatch` | WS4 | prefix | | - | B11: evacuation can be cancelled. |
-| `DeviceUseAction.UseDevice` | `RepairSlotPatch` | WS5 | prefix (ref `slotTag`; acts only for `RepairAction`) | | - | R1: repair slot fallback. |
-| `RepairAction.GetState(5 args)` | `RepairStatePatch` | WS5 | postfix | | - | R1: offer the repair through a free Block Leak slot. |
+| `DeviceUseAction.UseDevice` | `RepairSlotPatch` | WS5 (+WS3 step) | prefix (ref `slotTag`; acts only for `RepairAction` and, on a shared leak target, `BlockLeakAction`) | | - | R1: repair slot fallback. P8: a second blocker takes `Default`, then `Repair`, when `Block Leak` is taken. |
+| `RepairAction.GetState(5 args)` | `RepairStatePatch` | WS5 (+WS3 step) | postfix | | - | R1: offer the repair through a free Block Leak slot. P8: greyed out while two others already work a shared leak. |
 | `RepairAction.UpdateAction` | `RepairUpdatePatch` | WS5 | postfix | | - | R2 leak throttle, R3 one close, repair seal on hatches. |
 | `RepairAction.StopMainCharacter` | `RepairStopPatch` | WS5 | postfix | | - | R2/R3 cleanup. |
 | `SalvageReplacementParts.GetState` / `GetActionProfit` / `UpdateAction` | `SalvageStateRatioPatch`, `SalvageProfitRatioPatch`, `SalvageUpdateRatioPatch` | WS5 | transpilers | | - | R5: `2f` -> tunable scrap per part. If any of the three fails to match, or is not applied, all three stay at vanilla's 2. |
 
 ## Cross-workstream interactions (WS7 audit)
 
-**No game method is patched by more than one workstream.** Every target above has one patch class,
-except the salvage trio, which belongs to WS5 alone. Several targets that sound shared are not:
+**Every target above has one patch class**, except the salvage trio, which belongs to WS5 alone. Two
+WS5 classes carry a WS3 (P8) step inside the same class rather than a second patch on the same target:
+`RepairSlotPatch` (the second blocker's slot) and `RepairStatePatch` (the two-worker cap, run after the
+R1 fallback). Several targets that sound shared are not:
 
 - **Separate targets.** `BlockLeakAction` (WS3) and `RepairAction` (WS5) declare their own
-  `UpdateAction`, `GetState` and `StopMainCharacter`. `DeviceUseAction.UseDevice` (WS5) acts only
-  for `RepairAction`. The mod's own `DeviceUseAction` subclasses (equalize, exhaust blow, dismantle)
-  pass through it unchanged.
+  `UpdateAction`, `GetState`, `StartMainCharacter` and `StopMainCharacter`. `DeviceUseAction.UseDevice`
+  acts only for `RepairAction` and, on a shared leak target, `BlockLeakAction`. The mod's own
+  `DeviceUseAction` subclasses (equalize, exhaust blow, dismantle) pass through it unchanged.
 - **Single owners.** `Hatch.*` is patched only by WS2. WS4 and WS5 only read `CanBeOpened` and write
   `Locked`. `Compartment.*` is patched only by WS1. `AutomaticActionsController.DoUpdate` is patched
   only by WS3.
@@ -89,7 +92,8 @@ interactions happen through shared game state instead:
 | `HatchSeals.Shared` | WS3 blocker, WS5 repair | WS2 exchange and panel | Keyed by (hatch, owner). Re-added every interacting frame and removed on stop. WS2 clears it on session start. No conflict. |
 | `LeakableEquipment.LeakIntensity` modifiers | vanilla blocker (`"BlockLeak"` 0.2), WS5 (`"DC Repair Throttle"` 1 - P) | vanilla leak | Different names, multiplicative (C9). WS3's hatch placeholder is never attached to a stat. |
 | `Compartment.Air` / `Water` | WS1 (venting, compressor, breach floor), WS2 (exchange, equalize) | everyone | All writes are additive deltas against the current value, with no cached totals, so they compose. |
-| `Interactable.maxCharacters` | WS3 (P8) | vanilla `RepairAction.GetState`, `BlockLeakAction.Start` (their `MaxCharacters == 1` rules) | Intended: with two seats, vanilla no longer hides the repair or stops a repairer when a blocker starts. |
+| `Interactable.maxCharacters` | WS3 (P8), only on leaking holes, pipes and hatches without crew work slots | vanilla `RepairAction.GetState`, `BlockLeakAction.Start` (their `MaxCharacters == 1` rules), vanilla block-leak crowding cancel; WS3/WS5 shared-target rules (`MaxCharacters == 2`) | Intended: with two seats, vanilla no longer hides the repair or stops a repairer when a blocker starts. Saved with the game, so a widened target stays widened. |
+| `Activator.Users` (block-leak target) | WS3 `BlockLeakStartPatch` (removes kept blockers, puts them back in its finalizer) | vanilla `BlockLeakAction.StartMainCharacter` replacement loop | Only for the duration of that one vanilla call. The only other reader then is `BlockLeakStopPatch` (for a replaced blocker), which looks for repairers, and those are never hidden. |
 | `AutomaticActionsController.pumpDelay` | WS3 only | vanilla | Single writer. |
 | `InteractableSlot.IsBelowWater` / tolerance | WS1 (P6 tick, P7 tuning) | vanilla, WS5 slot checks | Single writer. |
 | Session reset (`DcSettings.SessionStarted`) | WS2 seals and tunables, WS3 one-shot, WS5 repair tracks, salvage tunable, compartment tick clock (WS7) | - | Each subscriber resets only its own state. Order does not matter. |

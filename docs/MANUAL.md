@@ -256,12 +256,31 @@ and leaks instead of swinging open.
 
 #### Two crewmen on one leak
 
-Hull holes, leaking pipes and hatches that the base game lets only one crewman work now take **two**.
-One can block the leak while the other repairs it, and neither cancels the other. On a hull hole both
-stations can be used at once.
+A leaking hull hole, pipe or hatch takes **two** crewmen at once: one blocking and one repairing, or two
+blocking. In the base game a second block-leak order only swapped the men. On a hull hole both stations
+can be used at once.
+
+To put a second crewman on a leak:
+
+1. Get the first man working on it. A sailor may already be blocking it on his own; otherwise order
+   **Block leak** or **Repair** on it as usual.
+2. Select the second man (an officer, or select nobody and let the game send a free crewman).
+3. Open the interaction wheel on the same leaking object and choose **Block leak** or **Repair**.
+4. He walks to the free station and works beside the first man. The first man keeps working.
+
+Limits:
+
+- **Two at most.** With two men already there, **Repair** is greyed out ("used by somebody else"), and a
+  new **Block leak** order takes over from one of the blockers.
+- **One repairer.** A second **Repair** stays greyed out ("already being repaired"), as in the base game.
+- **Each man needs his own station.** If no station is free for the new man, **Block leak** takes over
+  from the man blocking there (the base game's behaviour) and **Repair** is greyed out with the
+  game's reason (occupied, unreachable, or under water without a rebreather). On a hatch the free
+  station can be on the far side: he needs a way round to it, and a rebreather if that side is flooded.
+- Repairs that need parts still need them. With none at hand, **Repair** is greyed out.
 
 Blocking works as in the base game for holes and pipes: while a crewman holds the leak, it runs at
-about a fifth of its strength.
+about a fifth of its strength. Two blockers stack, and so do a blocker and a repairer.
 
 #### Blocking a leak on a hatch
 
