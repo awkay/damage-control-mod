@@ -454,3 +454,44 @@ WS4-10. **Evacuation cancel (B11, 03 §6 #26).** Order a compartment evacuated; 
 WS4-11. **No regressions.** With no hatch blocked, crew move between compartments, to the bridge and to their
    stations as in vanilla; no `NullReferenceException` mentioning `DamageControl` and no
    `patch Reachability threw` (or `DoorTraverse`, `LadderTraverse`, `EvacuationCancel`) line in the log.
+
+### WS3: leaks and crew automation
+
+The leaks area adds 2 icons (the "carry the wounded" wheel icon, normal and highlighted) to the
+`icons ready` count. Set `General/Settings/Damage Control/Debug` to True for the `block leak ...`,
+`slot crowding ...` and `carry wounded ...` lines. No `patch BlockLeakUpdate threw` (or `BlockLeakStop`,
+`BlockLeakState`, `SlotCrowding`, `LeakBlockingGate`, `AutoCarryWoundedGate`, `TrimPumpLeakHold`) line may
+appear in the log.
+
+WS3-1. **Blocking a wrecked hatch (H8, C28, 02 §6 #25).** Destroy a closed interior hatch so it shows the
+   Leaking status (WS2 H7). Its wheel offers vanilla's "Block leak". Order it: the crewman walks to the hatch's
+   default slot and takes the repair pose; the log has **no** `InvalidCastException` from `BlockLeakAction`.
+   While he is in the pose the panel shows exactly one green "partly sealed" line and the inflow visibly
+   slows; when he leaves (cancel the order) the line disappears and the leak returns to its full 2 %. Open
+   the hatch while he blocks it: his order is cancelled about 2.3 s later, and "Block leak" is no longer
+   offered on the open hatch. Save while he blocks, load: the seal line comes back once he is working again.
+WS3-2. **Blocker plus repairer (P8, with WS5).** On the same wrecked hatch, and on a leaking pipe, order one
+   crewman to block and another to repair: both work at once and neither cancels the other. On a hull hole
+   both of its slots can be used at the same time. With Debug on, `slot crowding: ... now takes 2 characters`
+   appears once per hole, pipe or hatch.
+WS3-3. **Hull hole (02 §6 #26).** A hull hole's leak rate drops by about 80 % while a man holds the block-leak
+   pose and returns when he leaves (vanilla behaviour, unchanged by the mod; check it still works).
+WS3-4. **Automatic leak blocking (H12, 02 §6 #27).** Default (on): when a pipe starts leaking a free sailor goes
+   and blocks it without an order. Switch it off on the Workshop: new leaks get no self-dispatched sailor;
+   ordered blockers still work. Switch it back on: idle sailors go to the open leaks again.
+WS3-5. **Automatic carrying (H13, 02 §6 #28).** Default (on): injured crew are carried to bunks as in vanilla,
+   and the light switch shows no "Carry the wounded to their bunks" order. Switch automatic carrying off:
+   newly injured crew stay where they fell. The light switch now offers the order, disabled while nobody
+   lies injured, enabled otherwise. Use it (with and without a crewman selected): nobody walks to the switch,
+   free crewmen carry every injured man to a bunk, and then carrying stops again for the next casualty. The
+   order does not appear in the orders (tab) list.
+WS3-6. **Divers with automatic carrying off (C27).** With automatic carrying off, send a diver out and let him
+   come back to the diver spot: a crewman on deck still pulls him aboard.
+WS3-7. **Load with automatic carrying off (D7).** With it off and someone lying injured, save and load (twice in
+   the same game session): after each load the crew carry the injured once, then stop.
+WS3-8. **Trim pump (H14).** With a leak somewhere aboard, run the trim pump until it has nothing left to pump:
+   it stays on (vanilla would switch it off after its delay). Stop the last leak: about 55 game seconds later (vanilla's
+   `PumpTurnOffDelay` on the `AutomaticActionsController` task row) the crew switch it off as usual. Compressors, ventilation, lighting and the
+   exterior hatch automation behave as in vanilla.
+WS3-9. **Save/load (02 §6 #30).** The two automation toggles survive save/load (WS0 item 8); the one-shot carry
+   order does not (it re-arms on load, WS3-7).

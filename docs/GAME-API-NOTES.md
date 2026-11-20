@@ -741,3 +741,30 @@ whole session. Lookup types in the 2026.1 UI: wheel, `Actions`, `Actions (Banner
   `CancelActiveOrders(0, 5)` therefore means "drop the current order-level behaviour".
 - **Evacuation.** `EvacuateToSafetyAction.StartCharacter` sets `CanBeStopped = false` and then calls the private
   `Escape(CharacterData)`; a timed update calls `Escape` again for each new leg.
+
+## 10. Leaks and crew automation (WS3)
+
+- **`BlockLeakAction` (2026.1).** Private fields `leak` (`Leaking`), `leakIntensityModifier` (`Modifier`),
+  `replacesRepairOrder`. `UpdateAction` adds the `"BlockLeak"` 0.2 scale modifier only while
+  `Character.IsInteracting` and the field is null, through a hard cast of `leak.Equipment` to
+  `LeakableEquipment`; then it cancels on crowding (`InteractingCharacters.Count > MaxCharacters`) or when
+  `leak.Equipment` is null, and calls the base device-use update. `StopMainCharacter` removes
+  `IsBeingRepaired` and calls `Remove()` on the modifier field. There is no open-hatch cancel. A `Modifier`
+  built with a null target is safe to `Remove()` and serializes as name id, value and flags only.
+  `StartMainCharacter` reads `GetComponent<Interactable>()` on the equipment without a null check and uses
+  the `"Block Leak"` slot, falling back to `"Default"`; it stops `RepairAction` users when the
+  interactable's `MaxCharacters` is 1.
+- **`LeakBlockingBySailors.DoUpdate`** (private, per-frame update listener) dispatches `new BlockLeakAction`
+  directly, only for `LeakableEquipment` (its list comes from `PlayerShip.LeakStarted` and `HasStatus<Leaking>`
+  over `LeakableEquipment`), so it never targets hatches.
+- **`AutoCarryWoundedToSafety.DoUpdate`** (private, timed, returns the next interval: 2.5 s idle) first
+  pulls divers aboard when `diverSpot.Divers.Count != 0`, then round-robins `PlayerShip.RagdollCrew`. Its
+  listener is registered only when the boat has a `DiverSpot`.
+- **`AutomaticActionsController.DoUpdate`** (private, timed, 1.5 s) keeps sustained-condition deadlines as
+  private `long` game-tick fields (0 = not running); the pump uses `pumpDelay` with `PumpTurnOffDelay`
+  (55 s on the vanilla `General/Background Tasks` row).
+- **`Interactable`.** Private `maxCharacters` (initial, also the clamp of the `MaxCharacters` setter) and
+  `maxCharactersCurrent`; nothing in the game sets `MaxCharacters`. Sibling-slot exclusion is
+  `InteractableSlot.DisabledSlots` plus `AddDisableReason/RemoveDisableReason(slot)`, applied on `Reserve`.
+- **Light switch.** `LightSwitch` equipment; vanilla `Crew/Actions` rows use activator tag `Light Switch`.
+- **Orders list.** The 2026.1 hook for "not shown in the orders list" is `CharacterAction.ShowInTabMenuForActivator`.
