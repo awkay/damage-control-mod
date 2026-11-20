@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Leaks;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Characters;
 using UBOAT.Game.Scene.Interactions;
@@ -17,6 +18,11 @@ namespace DamageControl.Game.Leaks
 	[HarmonyPatch(typeof(Interactable), "OnSlotInteractionChanged")]
 	internal static class SlotCrowdingPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("SlotCrowding", ex);
+		}
+
 		private static void Postfix(Interactable __instance, ref int ___maxCharacters, ref int ___maxCharactersCurrent)
 		{
 			try

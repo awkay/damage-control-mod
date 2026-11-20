@@ -1,5 +1,6 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using DamageControl.Game.Settings;
 using HarmonyLib;
 using UBOAT.Game.Scene.Items;
@@ -16,12 +17,20 @@ namespace DamageControl.Game.Hatches
 	[HarmonyPatch(typeof(Hatch), "Locked", MethodType.Setter)]
 	internal static class HatchLockedSetterPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("HatchLockedSetter", ex);
+		}
+
 		private static bool Prefix(Hatch __instance, bool value)
 		{
 			try
 			{
 				if (value || HatchRuntime.GuardBypassed || !__instance.Locked || __instance.IsExteriorHatch)
 					return true;
+				if (!GameplayState.IsActive)
+					return true; // a save restoring an open hatch, scene setup: vanilla
+
 				if (HatchRuntime.HasNoCompartments(__instance))
 					return true;
 				if (!DcSettings.HatchPressureBlocking && !HatchRuntime.IsRepairHeld(__instance))

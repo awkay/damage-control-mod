@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DamageControl.Core.Common;
 using DamageControl.Core.Repair;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Core;
 using UBOAT.Game.Scene.Characters;
@@ -22,6 +23,11 @@ namespace DamageControl.Game.Repair
 	[HarmonyPatch(typeof(RepairAction), "GetState", new Type[] { typeof(GameActivator), typeof(PlayableCharacter), typeof(bool), typeof(bool), typeof(ActionContext) })]
 	internal static class RepairStatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("RepairState", ex);
+		}
+
 		private static void Postfix(RepairAction __instance, GameActivator activator, PlayableCharacter character, bool fillDetails, bool isPlayerOrder, ref ActionStateData __result)
 		{
 			try

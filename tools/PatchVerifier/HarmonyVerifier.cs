@@ -106,6 +106,11 @@ public sealed class HarmonyVerifier : IDisposable
                 report.Error($"{type.FullName}: has [HarmonyPatch] but no Prefix/Postfix/Transpiler/Finalizer method");
                 continue;
             }
+            // Apply-time fail-safe (docs/PATCHES.md): without a Cleanup that swallows the exception, one
+            // unresolvable target aborts PatchAll for every later class.
+            if (!methods.Any(m => m.IsStatic && m.Name == "Cleanup" && m.ReturnType.FullName == "System.Exception"
+                && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType.FullName == "System.Exception"))
+                report.Error($"{type.FullName}: needs 'static Exception Cleanup(Exception ex) => PatchGuard.Cleanup(id, ex)' so a failed apply falls back to vanilla");
             foreach (var pm in patchMethods)
             {
                 patchCount++;

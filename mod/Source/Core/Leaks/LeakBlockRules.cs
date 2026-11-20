@@ -48,6 +48,18 @@ namespace DamageControl.Core.Leaks
 		}
 
 		/// <summary>
+		/// Vanilla's block-leak stop removes the target's "is being repaired" status whoever added it. With
+		/// P8 a blocker and a repairer share one target, so a blocker leaving would strip the status of a
+		/// repair still in progress, which also ends the hatch repair hold (C10). True when the status must be
+		/// put back after vanilla's stop: it was present before, another crewman's repair is still running,
+		/// and it is gone afterwards.
+		/// </summary>
+		public static bool RestoresRepairStatus(bool statusBefore, bool otherRepairRunning, bool statusAfter)
+		{
+			return statusBefore && otherRepairRunning && !statusAfter;
+		}
+
+		/// <summary>
 		/// 02 §6 #16: whether the block-leak order may be offered on this target. Hidden when there is no
 		/// visible leak, on an open hatch, and on a hatch with no interaction slots (vanilla would throw
 		/// looking for one).

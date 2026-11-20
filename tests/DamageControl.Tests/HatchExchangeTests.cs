@@ -416,6 +416,55 @@ namespace DamageControl.Tests
             Assert.Equal(0.0, flow.Water);
         }
 
+        // ---- equalize on the substep basis (WS7, C2 note)
+
+        [Fact]
+        public void EqualizeSubstepsMatchTheCappedStepAtOneTimes()
+        {
+            FrameSubsteps plan = HatchExchange.EqualizeSubsteps(new SimClock(0.02f, 1f, 1f), 2f);
+            Assert.Equal(1, plan.Count);
+            Assert.Equal(HatchExchange.EqualizeStep(new SimClock(0.02f, 1f, 1f), 2f), plan.Step, 6);
+        }
+
+        [Theory]
+        [InlineData(0.0333f, 1f, 32f)]   // 32x through the game's own time scale: 1.07 game s per frame
+        [InlineData(0.0333f, 1f, 64f)]   // 64x: 2.13 game s per frame
+        [InlineData(0.43f, 64f, 1f)]     // 64x through Unity's time scale at its longest frame
+        public void EqualizeSubstepsCoverTheWholeFrameUnderCompression(float dt, float unityScale, float artificialScale)
+        {
+            var clock = new SimClock(dt, unityScale, artificialScale);
+            FrameSubsteps plan = HatchExchange.EqualizeSubsteps(clock, 2f);
+            float expected = clock.GameDt * clock.DampedRate(2f) / HatchExchange.EqualizeDivisor;
+            Assert.Equal(expected, plan.Total, 5);
+            // Each substep is no longer than one capped 0.5 s frame at this compression.
+            Assert.True(plan.Step <= HatchExchange.EqualizeStep(new SimClock(0.5f / artificialScale, unityScale, artificialScale), 2f) + 1e-6f);
+        }
+
+        [Fact]
+        public void EqualizeLosesNoTimeAtHighCompression()
+        {
+            // One 2 s frame at 64x moves the same air as four 0.5 s frames at 64x (the old capped step moved a quarter).
+            HatchSide l1 = Side(2.0, 20.0, freeVolume: 10.0), r1 = Side(1.0, 10.0, freeVolume: 10.0);
+            HatchSide l4 = l1, r4 = r1;
+            EqualizeFrame(new SimClock(2f / 64f, 1f, 64f), ref l1, ref r1);
+            for (int i = 0; i < 4; i++)
+                EqualizeFrame(new SimClock(0.5f / 64f, 1f, 64f), ref l4, ref r4);
+            Assert.True(l1.Air < 20.0);
+            Assert.Equal(l4.Air, l1.Air, 9);
+            Assert.Equal(r4.Air, r1.Air, 9);
+        }
+
+        private static void EqualizeFrame(SimClock clock, ref HatchSide left, ref HatchSide right)
+        {
+            FrameSubsteps plan = HatchExchange.EqualizeSubsteps(clock, 2f);
+            for (int i = 0; i < plan.Count; i++)
+            {
+                HatchFlow flow = HatchExchange.Equalize(left, right, Opening, plan.Step);
+                left = left.WithAirAdded(-flow.Air);
+                right = right.WithAirAdded(flow.Air);
+            }
+        }
+
         [Fact]
         public void NoStepNoFlow()
         {

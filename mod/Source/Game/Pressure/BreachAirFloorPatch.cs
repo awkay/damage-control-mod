@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Pressure;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Items;
 using UBOAT.Game.Scene.Physics;
@@ -15,11 +16,16 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(Tank), "SimulateBreach")]
 	internal static class BreachAirFloorPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("BreachAirFloor", ex);
+		}
+
 		private static void Prefix(Tank __instance, ExternalPressure breach)
 		{
 			try
 			{
-				if (breach == null || __instance.TankType != TankType.Compartment)
+				if (breach == null || __instance.TankType != TankType.Compartment || !GameplayState.IsActive)
 					return;
 				double air = __instance.Air;
 				double floored = BreachAirFloor.Apply(true, breach.Openess, air);

@@ -1,6 +1,7 @@
 using System;
 using DamageControl.Core.Common;
 using DamageControl.Core.Leaks;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Characters;
 using UBOAT.Game.Scene.Characters.Actions;
@@ -19,6 +20,11 @@ namespace DamageControl.Game.Leaks
 	[HarmonyPatch(typeof(BlockLeakAction), "GetState", new[] { typeof(GameActivator), typeof(PlayableCharacter) })]
 	internal static class BlockLeakStatePatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("BlockLeakState", ex);
+		}
+
 		private static void Postfix(GameActivator activator, ref ActionState __result)
 		{
 			try

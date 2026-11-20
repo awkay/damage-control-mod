@@ -21,6 +21,11 @@ namespace DamageControl.Game.Navigation
 	[HarmonyPatch(typeof(NavMeshNavigator), "IsDestinationReachable")]
 	internal static class ReachabilityPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("Reachability", ex);
+		}
+
 		private const string Feature = "Crew navigation through blocked hatches";
 
 		// Main-thread scratch list, rebuilt per call (a handful of hatches).
@@ -43,7 +48,7 @@ namespace DamageControl.Game.Navigation
 
 		private static bool IsBlocked(NavMeshNavigator navigator, Vector3 pos)
 		{
-			if (navigator == null || !BoatLayout.Require(Feature))
+			if (navigator == null || !GameplayState.IsActive || !BoatLayout.Require(Feature))
 				return false;
 			float conningTowerLevel;
 			if (!BoatLayout.TryGetConningTowerLevel(out conningTowerLevel))

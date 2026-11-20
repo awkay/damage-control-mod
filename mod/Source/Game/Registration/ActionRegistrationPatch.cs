@@ -25,6 +25,11 @@ namespace DamageControl.Game.Registration
 	[HarmonyPatch(typeof(CharacterActionsDatabase), "LoadActions")]
 	internal static class ActionRegistrationPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("ActionRegistration", ex);
+		}
+
 		private const string ActionsPath = "Crew/Actions";
 
 		[HarmonyPriority(Priority.Last)]

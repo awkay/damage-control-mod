@@ -21,10 +21,17 @@ namespace DamageControl.Game.Hatches
 	[HarmonyPatch(typeof(Hatch), "CanBeOpened", MethodType.Getter)]
 	internal static class HatchCanBeOpenedPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("HatchCanBeOpened", ex);
+		}
+
 		private static void Postfix(Hatch __instance, ref bool __result, bool ___pressureBlockade)
 		{
 			try
 			{
+				if (!GameplayState.IsActive)
+					return;
 				if (HatchRuntime.IsRepairHeld(__instance))
 				{
 					__result = false;

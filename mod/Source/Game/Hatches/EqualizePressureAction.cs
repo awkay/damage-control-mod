@@ -108,9 +108,16 @@ namespace DamageControl.Game.Hatches
 				return;
 			if (!HatchRuntime.SameWaterBody(left, right))
 			{
-				float k = HatchExchange.EqualizeStep(GameClock.Now(), HatchExchange.DefaultRate);
-				HatchFlow flow = HatchExchange.Equalize(HatchRuntime.ReadSide(left), HatchRuntime.ReadSide(right), geometry, k);
-				HatchRuntime.Apply(left, right, flow);
+				// Same basis as the hatch exchange: the whole frame in substeps of at most 0.5 game seconds,
+				// re-reading both sides each time, so no time is lost under compression.
+				FrameSubsteps substeps = HatchExchange.EqualizeSubsteps(GameClock.Now(), HatchExchange.DefaultRate);
+				for (int i = 0; i < substeps.Count; i++)
+				{
+					HatchFlow flow = HatchExchange.Equalize(HatchRuntime.ReadSide(left), HatchRuntime.ReadSide(right), geometry, substeps.Step);
+					HatchRuntime.Apply(left, right, flow);
+					if (flow.Air == 0.0 && flow.Water == 0.0)
+						break; // at rest
+				}
 			}
 			if (hatch.CanBeOpened)
 			{

@@ -2,7 +2,7 @@
 
 The game runs under CrossOver, so nothing here launches it. `./verify` catches offline everything
 that would stop the mod compiling, passing the loader's security check, or patching. What remains
-is behaviour, and that needs the in-game checklist at the end.
+is behaviour, and that needs the staged in-game test plan at the end.
 
 ## Layout
 
@@ -154,6 +154,12 @@ The mod's patch registry is its attribute-declared `[HarmonyPatch]` classes, app
 - manual `Harmony.Patch` calls, `PatchProcessor` and reverse patches;
 - `TargetMethod(s)`.
 
+`docs/PATCHES.md` lists every patch with its owner, kind, priority and gate. Each patch class also
+declares `private static Exception Cleanup(Exception ex) { return PatchGuard.Cleanup("Id", ex); }`.
+Without it, a target that fails to resolve in game would abort `PatchAll` for every later class. With
+it, the failure is logged once and only that class stays vanilla. Add the same Cleanup to every new
+patch class.
+
 ### Target resolution
 
 Resolution mirrors Harmony 2.2.2 `PatchTools.GetOriginalMethod`:
@@ -187,6 +193,7 @@ Resolution mirrors Harmony 2.2.2 `PatchTools.GetOriginalMethod`:
 ### Other checks
 
 - Exactly one concrete `IUserMod` with a public parameterless constructor.
+- Every patch class has the static `Exception Cleanup(Exception)` fail-safe (see "Patch registry").
 - Every external type reference resolves in the game assemblies.
 
 The C# compile already covers base types and overrides. Note that the verifier is stricter than Harmony
@@ -206,6 +213,7 @@ in one way: argument types must match exactly.
 | `in` parameter | CS8107, C# 7.0 |
 | UnityEngine in Core | Core purity error |
 | Bad permission name, corrupt xlsx | errors |
+| Patch class without `Cleanup(Exception)` | error, needs the fail-safe |
 
 ## Not verified offline
 
@@ -255,288 +263,181 @@ excluded) to:
   recompile check fires.
 - **Overrides:** `CROSSOVER_BOTTLE` and `MOD_ID` can be overridden in the environment.
 
-## In-game smoke test checklist
+## In-game test plan
 
-The log is `.../LocalLow/Deep Water Studio/UBOAT/output_log.txt` in the bottle. Every mod line starts
-with `[Damage Control] `. If a sheet edit does not show up, delete the game's parsed-sheet cache:
-`.../UBOAT/Data Sheets/Damage Control - *.dat`. The game reuses that cache while its access time is newer
-than the xlsx's.
+`./verify` cannot show behaviour, so the mod is tested in the game in stages. Stage 1 is a 10-minute
+smoke test; run it after every deploy. The later stages go one feature area at a time, riskiest first:
+the two whole-method replacements, then hatch rules, then the shared leak and repair targets, and so on.
+Stop at the first failed item and report it with the log lines it names.
 
-### Load and patching
+### Logs, debug and caches
 
-1. `./deploy`, then enable "Damage Control" in the launcher, accepting the Reflection permission if the
-   launcher asks.
-2. **First launch after a change (compile launch):**
-   - no `error CS` lines for our files in the log;
-   - `Temp/damage-control.dll` has a fresh timestamp;
-   - the log contains `Damage Control 0.1.0 loaded; applying Harmony patches.` and then
-     `Harmony patches applied.` with no Harmony exception between them;
-   - `icons ready: 12 served` appears (WS0 placeholder icons; the count grows as workstreams add art);
-   - no `bootstrap step ... failed` line.
-3. **Quit and launch again (cached-DLL launch, security-checked):** the same `loaded` line appears. If it
-   is missing, the security check rejected the cached assembly, which should not happen if `./verify`
-   passed.
-4. Check that there are no `NullReferenceException`s mentioning `DamageControl` in the log, including in
-   the main menu, where gameplay singletons are null.
+- **Log file:** `output_log.txt` in the CrossOver bottle:
 
-### WS0: registration, settings, icons
+  ```
+  ~/Library/Application Support/CrossOver/Bottles/Steam/drive_c/users/crossover/AppData/LocalLow/Deep Water Studio/UBOAT/output_log.txt
+  ```
 
-5. **Action registration (R10).** Start a new campaign and go aboard. Open the interaction wheel on
-   the Workshop in the stern torpedo room. The wheel shows our three toggles after the workshop's own
-   orders. The labels are "Enable hatch pressure blocking", "Stop sailors blocking leaks on their own"
-   and "Stop the crew carrying the wounded on their own", each with its placeholder icon. Hovering
-   shows the highlighted (amber) icon and the description. This proves the `LoadActions` postfix
-   registered a mod type (04 §8 #15 as revised by D2). Set `General/Settings/Damage Control/Debug` to
-   True to also see `action registration: 3 mod action rows registered`.
-6. **Defaults (D3).** On a new campaign the log shows
-   `campaign settings created: HatchPressureBlocking=False, AutoLeakBlocking=True, AutoCarryWounded=True`.
-7. **Toggle.** Click a toggle with no crewman selected (NoCharacter), then again with a crewman selected
-   (Normal). Each click flips the setting at once and logs `setting X is now on/off`. The label flips,
-   no crewman walks, and no "work order" voice line plays (02 §6 #17, 01 §6 #23).
-8. **Save/load (04 §8 #18).** Change all three toggles, save, quit to the menu and load. The log shows
-   `campaign settings restored:` with the changed values, and the wheel labels match.
-9. **Pre-mod save.** Disable the mod and load (or start and save) a campaign. Re-enable the mod and
-   load that save. The log shows
-   `this save has no Damage Control settings yet; creating them with defaults` and then
-   `campaign settings created:` with the D3 values. Save, reload, and confirm `restored` this time.
-10. **Removal.** Load a save made with the mod while the mod is disabled. Expect, at most, an error
-    about the unknown task type; the campaign itself plays normally.
-11. **Custom Actions coexistence (D2).** With the Custom Actions mod also enabled, each toggle appears
-    exactly once on the Workshop.
-12. **Boat layout.** With Debug on, going aboard logs `boat layout built:` with each hatch's lowY and
-    highY. Check that the conning-tower hatch's lowY is near the control-room ceiling and the exterior
-    hatch's lowY is near the top of the tower; this is the C12 replacement for 101.55 m and 102.8 m.
-    A `boat layout unknown:` line means the dependent features stay off; report it.
+  Every mod line starts with `[Damage Control] `. A useful filter is
+  `grep -n "Damage Control\|DamageControl\|Exception" output_log.txt`.
+- **Debug lines:** most per-feature lines are debug lines. Turn them on with the data row
+  `General/Settings/Damage Control/Debug` = `True` in `data/common/foundation.json`, then
+  `./deploy`. Debug also adds `[DC]` lines to the hatch panel.
+- **Parsed-sheet cache:** if a sheet edit does not show up, delete the game's cache,
+  `.../UBOAT/Data Sheets/Damage Control - *.dat`. The game reuses it while its access time is newer
+  than the xlsx's.
+- **Failure lines that must never appear:**
+  - `patch <Id> threw and falls back to vanilla behaviour`: a run-time failure, logged once per session.
+  - `patch <Id> (not applied) threw ...`: the patch could not be applied at load.
+  - `bootstrap step "..." failed`.
+  - Any `NullReferenceException` or `InvalidCastException` whose stack mentions `DamageControl`.
 
-### WS1: pressure and air
+  Each stage below names the patch ids that belong to it (the ids are listed in `docs/PATCHES.md`).
 
-Most of these need a damaged boat. A sandbox or test campaign with a few hull hits is enough; set
-`General/Settings/Damage Control/Debug` to True to also get `pressure layout:` in the log, which names
-the conning-tower, diesel and galley compartments the features below act on. A
-`conning tower compartment not found` or `diesel compartment not found` warning means that part is off;
-report it.
+### Stage 1: smoke test (about 10 minutes)
 
-- **P1 breach air floor.** Let a compartment flood through a hull breach until it is full. Its bilge
-  panel's air-pressure line (P13) never drops to 0.00 atm, and the water never fills the last of the
-  volume with no air left. No pressure spikes to absurd values (thousands of atm) on the panel.
-- **P2 unbreathable air.** In a compartment that floods past about 1.5 m above the floor, crew start
-  choking (the game's toxic-air alert shows) and recover after the water drops below it. A compartment
-  at normal 1 atm with oxygen above 5 % never shows the alert, even at 4 to 8 atm (vanilla 2026.1 would
-  have flagged those). Choking injuries are rare (about 1 in 20 checks for a sailor), not constant.
-- **P3 rebreathers.** Note how long a rebreather lasts in vanilla (mod disabled), then with the mod: it
-  lasts about 2.5 times as long. Its durability bar drains visibly slower while worn. Taking it off and
-  on again does not stack the bonus (the drain rate stays the same).
-- **P4 hatch pressure reading / P6 hatch stress.** With two neighbouring compartments at clearly
-  different air pressure and the hatch between them closed, the hatch eventually shows the game's
-  pressure-damage status and takes water damage, even with dry floors. With equal pressure it never does.
-- **P6 compartment tick.**
-  - 01 §6 #25: flood a compartment deeply at depth (high pressure). Its light bulbs and the
-    pressure-sensitive equipment under water accumulate water damage over minutes and show the
-    pressure-damage status; once the compartment is pumped dry and the pressure is normal the status
-    disappears, and it comes back if the compartment floods again (vanilla could not re-attach it).
-  - A crewman's slot near a bulkhead counts as underwater (needs a rebreather) when the compartment on
-    the other side of the bulkhead floods past the slot's tolerance, even if his own room is dry.
-  - The log has no `patch CompartmentTick threw` line.
-- **P7 slot tuning.** Hatch and bulkhead slots stay usable until about 1.4 m of water; dive-plane
-  stations stop at about 0.7 m and the electric engines at about 0.6 m. Watch a crewman open and pass
-  the control-room to conning-tower hatch and an ordinary bulkhead hatch: the animations must look
-  right. If they look wrong, set `General/Settings/Damage Control/Hatch Slot Interaction Types` to False
-  (tolerances still apply) and report it.
-- **P9 venting and diesel draw (01 §6 #24).** Dive to 20 m with no snorkel and force the diesel on if
-  the game allows it, or run it on the surface and dive: the engine room's bilge panel pressure falls
-  toward 0.35 atm and stops there. Surface (deck depth under 3.5 m): it returns to about 1.00 atm within
-  a few seconds. Open the exterior hatch on the surface: the conning tower goes to 1.00 atm at once. With
-  a working snorkel raised at snorkel depth the engine room stays near 1 atm.
-- **P10 compressor.** Run the air compressor for a while: its compartment's pressure slowly drops. In a
-  compartment at or below 0.35 atm the compressor no longer fills the tanks.
-- **P12b buoyancy tooltip.** Hover the buoyancy indicator: below the vanilla text come the ballast total,
-  one line per ballast/quick-diving tank (water and % of capacity, names readable), the total water in
-  the hull, and one line per compartment, each counted once. A compartment with 5 m³ or more (the galley
-  with 2 m³ or more) is red. Values change as tanks flood and blow.
-- **P13 bilge pressure.** Hover any compartment's bilges (the "water" panel): the last line gives the
-  compartment's air pressure in atm with two decimals, also when the bilges are dry.
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 1.1 | `./deploy`; enable "Damage Control" once in the launcher's Mods tab and accept Reflection if asked | Launch the game (this launch compiles the mod) | Main menu loads. `Temp/damage-control.dll` has a fresh timestamp. | `Damage Control 0.1.0 loaded; applying Harmony patches.` then `Harmony patches applied.` with no Harmony exception between them; no `error CS`; no `(not applied)`; no `bootstrap step` |
+| 1.2 | - | Look at the log after the main menu | Icons load: the count equals the number of PNGs under `mod/Assets/Icons` (26 at WS7) | `icons ready: 26 served`; no `icon ... failed to load` |
+| 1.3 | - | Quit, launch again (cached-DLL launch, security-checked) | Same `loaded` line. If it is missing, the security check rejected the cached assembly. | `loaded; applying Harmony patches` |
+| 1.4 | Main menu | Wait 30 s, open the options and the load-game screen | No mod errors while outside gameplay | no `DamageControl` in any exception; no `patch ... threw` |
+| 1.5 | - | Start a new campaign and go aboard | Settings task created with the D3 defaults | `campaign settings created: HatchPressureBlocking=False, AutoLeakBlocking=True, AutoCarryWounded=True` |
+| 1.6 | Aboard | Open the interaction wheel on the Workshop (stern torpedo room) | After the workshop's own orders come our three toggles ("Enable hatch pressure blocking", "Stop sailors blocking leaks on their own", "Stop the crew carrying the wounded on their own"), each with its icon. Hovering shows the amber icon and the description. | with Debug on: `action registration: 3 mod action rows registered` |
+| 1.7 | - | Click each toggle once with no crewman selected | The label flips at once; no crewman walks; no work-order voice line | `setting HatchPressureBlocking is now on` (and the other two) |
+| 1.8 | - | Look at an interior hatch, a pipe and the bilges | The hatch panel shows two pressures; the bilge panel ends with an air-pressure line in atm | no `patch HatchGetStateText threw`, `BilgePressure` |
+| 1.9 | Toggles changed in 1.7 | Run 1 minute at 1x, then 1 minute at 64x | Nothing unusual; no water moves in a dry boat | no `patch HatchDoUpdate threw`, `CompartmentTick`, `Venting`, `CompressorDraw` |
+| 1.10 | - | Save, quit to the menu, load the save | Toggles keep their changed values; the wheel labels match | `campaign settings restored:` with the changed values |
 
-### WS2: hatches
+If Stage 1 passes, the mod loads, patches, serves icons, saves and stays quiet outside gameplay.
 
-Turn on `General/Settings/Damage Control/Debug` for these: the hatch panel then shows `[DC]` lines with
-lowY/highY, the seal count and both compartments' capacity, water, air, pressure and water elevation.
-Under D1 water alone needs about 9 m of head difference to lock a hatch; to provoke a lock quickly, set
-`Hatch Lock Threshold` to `0.05` (delete the parsed-sheet cache afterwards, see above). No
-`patch Hatch... threw and falls back to vanilla behaviour` line may appear in the log.
+### Stage 2: whole-method replacements
 
-H1. **Pressure lock (02 §6 #23).** Enable hatch pressure blocking on the Workshop. Flood the bow torpedo
-    room (or lower the threshold), close its aft hatch, and look at it: the panel starts with the red "held
-    shut" line, Open is disabled with vanilla's pressure warning, and ordering a crewman through it fails
-    (WS4 handles the path). Disable blocking: Open is offered again and works.
-H2. **Lock guard.** While H1 holds, try every way to open that hatch: wheel, first-person toggle, crew
-    walking through it. It stays shut and nothing throws. The exterior hatch, the toilet door and the cargo
-    hatch behave exactly as without the mod, with blocking on or off.
-H3. **Repair hold (C10).** With blocking **off**, order a repair on a damaged closed interior hatch. While
-    the repair status shows, Open is disabled; after the repair it opens normally.
-H4. **Open-hatch exchange (02 §6 #24).** Open a hatch between a flooded and a dry room. Water levels move
-    toward each other, the jet particles play on the receiving side only, and they stop at equilibrium.
-    It should drain at vanilla's speed: the default `Hatch Flow Rate` 2 matches vanilla 2026.1's open-hatch
-    rate (2 m3/s per metre of level difference at 1x). If it feels off, tune that row and record the value.
-H5. **Air through open hatches.** With debug lines on, open a hatch between rooms at different air
-    pressures (e.g. the diesel room after a submerged diesel run, WS1): both `p` values converge within a
-    few seconds without oscillating.
-H6. **Conning tower (vertical passage).** Water poured into the tower drains down into the control room;
-    with the control room flooded above the tower opening and higher pressure below, water rises into the
-    tower. No jet particles at that hatch.
-H7. **Destroyed closed hatch (02 §6 #25, hatch part).** Destroy a closed interior hatch (debug tools or
-    combat). It gains the Leaking status, leaks slowly (about 2 % of the open rate), and its panel shows the
-    red "wrecked" line instead of the durability line. Repairing any health stops the leak. After WS3/WS5:
-    a blocker or a repairer at the hatch adds exactly one green "partly sealed" line and visibly slows the
-    leak; opening the hatch cancels the blocker.
-H8. **Blow-open (H5).** A destroyed closed hatch whose far side's air pressure exceeds its seat side's by
-    more than a third of its design pressure blows open within a few seconds, with the "Pressure Damage"
-    sound. Never while it is intact or being repaired.
-H9. **Panel (H6).** Interior hatch panel: opening-side and closing-side pressures with two decimals, red
-    above 2 atm, blue below 0.8 atm; blank line; durability. In first person, looking at a hatch into an
-    evacuated compartment adds vanilla's evacuation line. The exterior hatch keeps vanilla's external
-    pressure line. No `[DC]` lines with debug off.
-H10. **Equalize (01 §6 #18).** With blocking on and a hatch held shut by pressure, the wheel on that
-    hatch offers "Equalize pressure" (also with no crewman selected). The crewman walks to the hatch's
-    default slot, works it, the two side pressures in the panel converge, the hatch opens by itself once it
-    may, and the order clears about 2.3 s later. It is not offered on open hatches, the exterior hatch or
-    doors. Check the working animation looks right and that the order never completes on its own before
-    the hatch opens.
-H11. **Occlusion (02 §6 #31).** Walk the boat bow to stern with hatches open and closed, in first person
-    and in the cut-away view: no rooms popping in or out compared with the mod disabled.
-H12. **Disabled hatch (H3).** If a hatch gets disabled during play while closed with higher pressure on
-    its seat side, it stays shut and gains the Leaking status (log line with debug on). Hard to provoke on
-    purpose; note it if seen.
-H13. **Save/load.** Save with a hatch held shut and another leaking; reload. Lock state, leak status and
-    panel are the same; seals are re-established by the working crewmen (WS3/WS5).
+These two replace vanilla methods outright (`docs/PATCHES.md`), so a bug here shows up everywhere. Turn
+Debug on.
 
-### Per feature
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 2.1 Hatch.DoUpdate, portal | Hatches open and closed | Walk bow to stern in first person and in the cut-away view | No rooms popping in or out compared with the mod disabled (02 §6 #31) | no `patch HatchDoUpdate threw` |
+| 2.2 open-hatch flow | One flooded and one dry room, hatch between them closed | Open the hatch | Levels move toward each other at vanilla's speed (default `Hatch Flow Rate` 2). Jet particles play on the receiving side only and stop at equilibrium. | `hatch tunables: lock threshold 0.9 atm, flow rate 2` |
+| 2.3 air through hatches | Rooms at different air pressure (the diesel room after a submerged diesel run, 6.4) | Open the hatch between them | Both `p` values in the `[DC]` panel lines converge within seconds without oscillating | - |
+| 2.4 vertical passage | Water in the conning tower | Open the tower hatch | Water drains down into the control room with no jets at that hatch. With the control room flooded above the opening and higher pressure below, water rises into the tower. | - |
+| 2.5 flow at 64x | Same as 2.2 | Repeat at 64x | The same total moves in the same game time (no stall and no burst) | - |
+| 2.6 Compartment tick, bulbs and overstress (01 §6 #25) | Flood a compartment deeply at depth | Wait a few game minutes, then pump it dry | Bulbs and pressure-sensitive equipment under water take water damage and show the pressure-damage status. The status goes once the room is dry and at normal pressure, and comes back when it floods again. | no `patch CompartmentTick threw` |
+| 2.7 neighbour slots | A dry room next to a flooded one | Put a crewman in a slot near the shared bulkhead | The slot counts as under water (needs a rebreather) once the neighbour floods past the slot's tolerance | - |
+| 2.8 tick at 64x | Same as 2.6 | Run 2.6 at 64x for the same game time | Damage accrues at about the same rate per game minute as at 1x (WS7: rolled over the real elapsed time) | - |
 
-13. For each new feature: exercise it, then save, quit, reload and confirm its state persists.
+### Stage 3: hatch rules (WS2)
 
-### WS4: ballast and navigation
+Under D1, water alone needs about 9 m of head difference to lock a hatch. To provoke a lock quickly, set
+`Hatch Lock Threshold` to `0.05` and delete the sheet cache. Patch ids: `HatchCanBeOpened`,
+`HatchLockedSetter`, `HatchOnDisable`, `HatchGetStateText`.
 
-The ballast area adds 3 icons (wheel normal and highlighted, action icon) to the `icons ready` count.
-Set `General/Settings/Damage Control/Debug` to True for the `exhaust blow ...` and `... stopped at blocked hatch ...`
-lines. Tunables are the `Exhaust Blow ...` rows in the same group (`data/ballast/ballast.json`).
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 3.1 pressure lock (02 §6 #23) | Blocking on; flood the bow torpedo room; close its aft hatch | Look at the hatch, then try to open it | The panel starts with the red "held shut" line. Open is disabled with vanilla's pressure warning. Turn blocking off and Open works again. | - |
+| 3.2 lock guard | 3.1 holding | Try the wheel, the first-person toggle and a crewman walking through | It stays shut; nothing throws. The exterior hatch, the toilet door and the cargo hatch behave as without the mod. | `kept hatch "..." shut: it cannot be opened now` |
+| 3.3 load restores hatches | 3.1 holding, plus another hatch open | Save and load | The open hatch is still open and the held hatch is still shut (the guard stands aside while loading) | - |
+| 3.4 equalize (01 §6 #18) | 3.1 holding | Wheel on that hatch: "Equalize pressure", also with no crewman selected | The crewman works the default slot and the two pressures converge. The hatch opens by itself once it may, and the order clears about 2.3 s later. It is not offered on open hatches, the exterior hatch or doors. The working animation looks right, and the order never completes before the hatch opens. | `equalize: hatch "..." opened` |
+| 3.5 equalize at 64x | Same as 3.4 | Run it at 64x | It converges in about the same game time as at 1x (WS7) | - |
+| 3.6 wrecked hatch (02 §6 #25) | Destroy a closed interior hatch | Look at it | Leaking status; slow leak (about 2 % of the open rate); red "wrecked" line. Any repair health stops the leak. | - |
+| 3.7 blow-open (H5) | 3.6, with far-side air pressure above the seat side by more than a third of design pressure | Wait | Blows open within a few seconds with the "Pressure Damage" sound. It never blows while intact or under repair. At 64x it blows within about the same game time. | `blown open by the pressure behind it` |
+| 3.8 panel (H6) | - | Look at an interior hatch and the exterior hatch, Debug off | Two pressures with two decimals (red above 2 atm, blue below 0.8); durability; the evacuation line when the far room is evacuated. The exterior hatch keeps vanilla's line. No `[DC]` lines with Debug off. | - |
+| 3.9 disabled hatch (H3) | A closed hatch with higher pressure on its seat side gets disabled | (hard to provoke; note it if seen) | Stays shut and gains Leaking | `disabled under pressure: kept shut and leaking` |
 
-WS4-1. **Exhaust Blow listed (B2).** Open the wheel on the flooding-and-blowing valve station (control room).
-   "Blow ballast with diesel exhaust" appears with its icon among the valve orders. Docked: it is disabled.
-WS4-2. **Gates.** Submerged, or surfaced on the electric motors: the entry is disabled, and hovering shows
-   "The diesel must be running." or "The deck must be clear of the water.". With the ballast already blown dry:
-   "The ballast tanks are already empty."
-WS4-3. **Blow (03 §6 #8).** Surface on compressed air only partly (stop the blow early, or surface with the deck
-   just clear), switch to the diesels at any ahead speed, then order Exhaust Blow. The crewman walks to the valve
-   and works it; his progress bar rises; the ballast tanks empty; the HP air bottle reading does **not** drop
-   during the blow; the order completes on its own (no stall at 99.9 %) and the depth preset shows Surface.
-   Higher diesel speed empties the tanks visibly faster. Afterwards the vanilla "blow" and "flood" orders still
-   work, and diving normally floods the tanks again.
-WS4-4. **Cancel.** During a blow, stop the diesel (all stop or switch to E-motors): within about 3 game seconds
-   the crewman leaves the valve and the tanks stop emptying. Repeat by diving during a blow (deck under water):
-   the order cancels too. In heavy seas, waves washing briefly over the deck must not cancel it.
-WS4-5. **Other boat types.** Repeat WS4-3 on a boat type with a different number of ballast tanks (Type II
-   or IX): the order completes and no exception mentioning `ExhaustBlow` appears in the log.
-WS4-6. **Save mid-blow.** Save while a blow runs and load: either the order resumes (the valve is taken over
-   again) or it is gone from the queue; nothing throws.
-WS4-7. **Blocked hatch, reachability (B9, 03 §6 #24).** Turn hatch pressure blocking on, flood a compartment
-   until its hatch cannot be opened, close it. Order a crewman to a station behind that hatch: the order is
-   unavailable for that crewman (shown disabled or refused) instead of being accepted. Orders on the near
-   side still work. Open hatches are never treated as blocked.
-WS4-8. **Blocked hatch, traverse (B10, 03 §6 #26).** With the same blocked hatch, make a crewman already
-   walking toward it (order given just before the hatch became blocked): he stops at the hatch and does not
-   pass through; the hatch stays closed (this also needs WS2's lock guard, H2). The exterior (bridge) hatch
-   ladder is not affected: crew still go up and down to the bridge when surfaced.
-WS4-9. **Conning tower.** At periscope depth, crew can still be ordered from the control room into the
-   conning tower and back (the conning-tower hatch must not count as blocked submerged). If it is refused,
-   report the hatch's `CanBeOpened` state from the debug log.
-WS4-10. **Evacuation cancel (B11, 03 §6 #26).** Order a compartment evacuated; while crew are leaving, select a
-   crewman and give him another order (or stop his current action): the evacuation is cancelled for him and he
-   follows the new order. Others keep evacuating.
-WS4-11. **No regressions.** With no hatch blocked, crew move between compartments, to the bridge and to their
-   stations as in vanilla; no `NullReferenceException` mentioning `DamageControl` and no
-   `patch Reachability threw` (or `DoorTraverse`, `LadderTraverse`, `EvacuationCancel`) line in the log.
+### Stage 4: leaks and repair on shared targets (WS3, WS5)
 
-### WS3: leaks and crew automation
+These targets are where WS3's two-seat crowding meets WS5's repair. Patch ids: `BlockLeakUpdate`,
+`BlockLeakStop`, `BlockLeakState`, `SlotCrowding`, `RepairSlot`, `RepairState`, `RepairUpdate`,
+`RepairStop`.
 
-The leaks area adds 2 icons (the "carry the wounded" wheel icon, normal and highlighted) to the
-`icons ready` count. Set `General/Settings/Damage Control/Debug` to True for the `block leak ...`,
-`slot crowding ...` and `carry wounded ...` lines. No `patch BlockLeakUpdate threw` (or `BlockLeakStop`,
-`BlockLeakState`, `SlotCrowding`, `LeakBlockingGate`, `AutoCarryWoundedGate`, `TrimPumpLeakHold`) line may
-appear in the log.
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 4.1 block a wrecked hatch (C28) | 3.6 | Order "Block leak" on it | The crewman takes the repair pose at the default slot. Exactly one green "partly sealed" line appears and the leak slows. Cancel the order and the line goes. Open the hatch while he blocks: his order cancels about 2.3 s later and "Block leak" is no longer offered. | no `InvalidCastException` from `BlockLeakAction`; `block leak: ... released a hatch seal` |
+| 4.2 blocker plus repairer (P8) | A wrecked hatch, a leaking pipe, a hull hole | Order one crewman to block and another to repair each | Both work at once; neither cancels the other | `slot crowding: "..." (...) now takes 2 characters` once per target |
+| 4.3 blocker leaves mid-repair (WS7 fix) | 4.2 on the wrecked hatch, with blocking **off** | Cancel the blocker while the repairer keeps working | The hatch still shows the repair status. Open stays disabled until the repair ends (C10 hold). | `block leak: kept the running repair's status on "..."` |
+| 4.4 hull hole (02 §6 #26) | A hull hole | A man holds the block-leak pose, then leaves | The leak drops about 80 % and returns when he leaves | - |
+| 4.5 repair slot fallback (R1) | A pipe or hole with a `Block Leak` slot; someone in the `Repair` slot | Order an engineer to repair | He goes to the free `Block Leak` (or `Default`) slot. The wheel offers the repair instead of disabling it. The animation looks right. | - |
+| 4.6 leak throttle (R2) | A leaking pipe | Repair it; pull the repairer off halfway | The leak slows as the bar fills and returns to full when he leaves. Repairing a non-leaking device does nothing to leaks. | - |
+| 4.7 hatch under repair (R3) | Blocking **off**; a damaged open interior hatch | Order a repair | The hatch closes when he starts. Open is disabled while the status shows, and crew do not walk through. Afterwards it stays closed and opens normally. The exterior hatch is never closed. | `repair: closed hatch "..." for the repair` |
+| 4.8 vanilla repairs intact (D4) | Flaws, sailor repair, the "do not repair" toggle | Use them | Exactly as without the mod | - |
 
-WS3-1. **Blocking a wrecked hatch (H8, C28, 02 §6 #25).** Destroy a closed interior hatch so it shows the
-   Leaking status (WS2 H7). Its wheel offers vanilla's "Block leak". Order it: the crewman walks to the hatch's
-   default slot and takes the repair pose; the log has **no** `InvalidCastException` from `BlockLeakAction`.
-   While he is in the pose the panel shows exactly one green "partly sealed" line and the inflow visibly
-   slows; when he leaves (cancel the order) the line disappears and the leak returns to its full 2 %. Open
-   the hatch while he blocks it: his order is cancelled about 2.3 s later, and "Block leak" is no longer
-   offered on the open hatch. Save while he blocks, load: the seal line comes back once he is working again.
-WS3-2. **Blocker plus repairer (P8, with WS5).** On the same wrecked hatch, and on a leaking pipe, order one
-   crewman to block and another to repair: both work at once and neither cancels the other. On a hull hole
-   both of its slots can be used at the same time. With Debug on, `slot crowding: ... now takes 2 characters`
-   appears once per hole, pipe or hatch.
-WS3-3. **Hull hole (02 §6 #26).** A hull hole's leak rate drops by about 80 % while a man holds the block-leak
-   pose and returns when he leaves (vanilla behaviour, unchanged by the mod; check it still works).
-WS3-4. **Automatic leak blocking (H12, 02 §6 #27).** Default (on): when a pipe starts leaking a free sailor goes
-   and blocks it without an order. Switch it off on the Workshop: new leaks get no self-dispatched sailor;
-   ordered blockers still work. Switch it back on: idle sailors go to the open leaks again.
-WS3-5. **Automatic carrying (H13, 02 §6 #28).** Default (on): injured crew are carried to bunks as in vanilla,
-   and the light switch shows no "Carry the wounded to their bunks" order. Switch automatic carrying off:
-   newly injured crew stay where they fell. The light switch now offers the order, disabled while nobody
-   lies injured, enabled otherwise. Use it (with and without a crewman selected): nobody walks to the switch,
-   free crewmen carry every injured man to a bunk, and then carrying stops again for the next casualty. The
-   order does not appear in the orders (tab) list.
-WS3-6. **Divers with automatic carrying off (C27).** With automatic carrying off, send a diver out and let him
-   come back to the diver spot: a crewman on deck still pulls him aboard.
-WS3-7. **Load with automatic carrying off (D7).** With it off and someone lying injured, save and load (twice in
-   the same game session): after each load the crew carry the injured once, then stop.
-WS3-8. **Trim pump (H14).** With a leak somewhere aboard, run the trim pump until it has nothing left to pump:
-   it stays on (vanilla would switch it off after its delay). Stop the last leak: about 55 game seconds later (vanilla's
-   `PumpTurnOffDelay` on the `AutomaticActionsController` task row) the crew switch it off as usual. Compressors, ventilation, lighting and the
-   exterior hatch automation behave as in vanilla.
-WS3-9. **Save/load (02 §6 #30).** The two automation toggles survive save/load (WS0 item 8); the one-shot carry
-   order does not (it re-arms on load, WS3-7).
+### Stage 5: crew automation (WS3)
 
-### WS5: repair and parts
+Patch ids: `LeakBlockingGate`, `AutoCarryWoundedGate`, `TrimPumpLeakHold`.
 
-The repair area adds 8 icons (dismantle: wheel normal, highlighted and disabled, action, cursor, banner,
-portrait) to the `icons ready` count. Set `General/Settings/Damage Control/Debug` to True for the
-`repair: ...`, `dismantle: ...` and `salvage ratio: ...` lines. No `patch Repair... threw` or
-`patch SalvageRatio... threw` line may appear in the log. The vanilla `RepairAction1` to `RepairAction3`
-and `SalvageReplacementParts` rows are not overridden (00 D4), so flaw repairs, sailor repair and the
-"do not repair" toggle must behave exactly as without the mod.
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 5.1 auto leak blocking (H12) | Default on | A pipe starts leaking | A free sailor blocks it unasked. Switched off: new leaks get nobody, but ordered blockers still work. Switched on again: idle sailors go. | `setting AutoLeakBlocking is now off` |
+| 5.2 auto carrying (H13) | Default on, then off | Injure crew | With it on they are carried as in vanilla, and the light switch has no "carry the wounded" order. With it off they stay where they fell, and the light switch offers the order (disabled while nobody lies injured). Using it, with or without a crewman selected, gets every injured man carried once, then carrying stops again. | `carry wounded: order given`; `nobody left lying injured; the one-shot order is done` |
+| 5.3 divers (C27) | Carrying off | Send a diver out and back | A crewman still pulls him aboard | - |
+| 5.4 load with carrying off (D7) | Off, someone injured | Save and load, twice in one session | Each load: carried once, then stop | - |
+| 5.5 trim pump (H14) | A leak aboard | Run the trim pump dry | It stays on. About 55 game s after the last leak stops, the crew switch it off. Compressors, ventilation, lighting and the exterior-hatch automation behave as in vanilla. | - |
 
-WS5-1. **Salvage 4:1 (R5, 04 §8 #7).** With Debug on, the first salvage evaluation logs
-   `salvage ratio: 4 scrap per part`. A `salvage ratio: the game's salvage code did not match` warning (or a
-   `SalvageReplacementParts.<method> has N scrap constants` line at startup) means the transpiler stood
-   down and salvage is vanilla 2:1; report it. Put 3 scrap in the workshop: "Salvage replacement parts" is
-   disabled with vanilla's not-enough-scrap warning. With 9 scrap an engineer makes one part about every
-   100 s at 1x, the workshop scrap drops by 4 each time, and the order ends with 1 scrap left. Fill the
-   workshop storage: the order ends without using scrap. The scrap item tooltip states 4 to 1.
-WS5-2. **Repair station fallback (R1, 04 §8 #6).** On a leaking pipe or hull hole with a `Block Leak` slot,
-   put one crewman in the `Repair` slot (or let a sailor block the leak), then order an engineer to repair:
-   he goes to the free `Block Leak` (or `Default`) slot instead of reporting the slot as taken, and the
-   wheel offers the repair rather than disabling it. On a damaged hatch the repairer uses the hatch's
-   default slot. Check that the working animation at each slot looks right.
-WS5-3. **Leak throttle (R2, 04 §8 #5).** Repair a leaking pipe or hull hole: while the repairer works, the
-   leak visibly slows as the progress bar fills, and returns to full if he is pulled off before finishing.
-   Repairing equipment that is damaged but not leaking does nothing to leaks and throws nothing.
-WS5-4. **Hatch under repair (R3, 04 §8 #17).** With hatch pressure blocking **off**, damage an open interior
-   hatch and order a repair: the hatch closes when the repairer starts working, Open is disabled while the
-   repair status shows, and crew do not walk through it. After the repair it stays closed and can be opened
-   normally. A destroyed closed hatch under repair shows the one green "partly sealed" line and leaks less
-   (WS2 H7). The exterior hatch is never closed by a repair.
-WS5-5. **Dismantle (R6, 04 §8 #8).** An engineer's wheel on an intact listed device (engines, compressor,
-   trim pump, valves, a compartment hatch, guns, periscope ...) shows "Dismantle for scrap" last, with its
-   icon; it is absent for non-engineers and on broken devices (health below 1). The engineer works the
-   repair slot (default slot on hatches); health drops one point at a time at repair speed (a Handyman
-   about a quarter faster); at 0 the order ends, the device is broken and the main storage gains 1 scrap
-   (2 for a Thrifty engineer). With the main storage full the scrap goes into the engineer's hands; if
-   that is also impossible a `no room for scrap` line is logged.
-WS5-6. **Dismantle checks (04 Q3).** The order is disabled while someone repairs the device (vanilla's
-   "already being repaired" text), while another crewman is already dismantling it, while the device is
-   out of action (damaged, no power, flooded out of depth), while the engineer carries a blocking item,
-   and when its slot is under water and he has no rebreather. Check that every listed device type still
-   offers it when healthy; one that never does is probably not a `Device` and needs a report.
-WS5-7. **Save mid-order.** Save while a repair on a leaking pipe and a dismantle are running and reload: both
-   resume or are dropped cleanly; the pipe's leak is not left permanently reduced after the repair (a later
-   repair of the same pipe clears any leftover throttle), and the dismantle does not start over from full.
+### Stage 6: navigation (WS4)
+
+Patch ids: `Reachability`, `DoorTraverse`, `LadderTraverse`, `EvacuationCancel`.
+
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 6.1 reachability (B9) | A hatch held shut (3.1) | Order a crewman to a station behind it | The order is unavailable for him; orders on the near side work. Open hatches never count as blocked. | - |
+| 6.2 traverse (B10) | A crewman already walking toward that hatch when it locks | Watch | He stops at the hatch and the hatch stays closed. The bridge ladder is unaffected when surfaced. | `stopped at blocked hatch` |
+| 6.3 conning tower | Periscope depth | Order crew from the control room to the tower and back | Works; the tower hatch is not blocked submerged | - |
+| 6.4 evacuation cancel (B11) | Evacuate a compartment | Give one evacuating crewman another order | He follows it; the others keep evacuating | - |
+| 6.5 no regressions | No hatch blocked | Normal play for a few minutes | Crew move as in vanilla | - |
+
+### Stage 7: pressure and air (WS1)
+
+With Debug on, `pressure layout:` names the tower, diesel and galley compartments.
+`conning tower compartment not found` or `diesel compartment not found` means that part is off; report
+it. Patch ids: `Venting`, `CompressorDraw`, `BreachAirFloor`, `AirToxic`, `AirToxicity`,
+`HatchPressureReading`, `RebreatherEndurance`, `SlotTuning`, `BuoyancyTooltip`, `BilgePressure`.
+
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 7.1 breach air floor (P1) | A breached compartment | Let it fill | The bilge pressure never reads 0.00 atm, and the water never takes the last of the volume. No absurd pressure spikes. | - |
+| 7.2 unbreathable air (P2) | Flood past about 1.5 m | Watch the crew there | They choke (toxic-air alert) and recover when the water drops. At 1 atm with oxygen above 5 % there is no alert, even at 4 to 8 atm. Injuries are rare. | - |
+| 7.3 rebreathers (P3) | - | Wear one; compare with the mod disabled | It lasts about 2.5 times as long; taking it off and on does not stack | - |
+| 7.4 hatch stress (P4/P6) | Different air pressure across a closed hatch, dry floors | Wait | The hatch shows pressure damage and takes damage; at equal pressure it never does | - |
+| 7.5 slot tuning (P7) | Water on the floor | Watch a crewman open the control-room to tower hatch and a bulkhead hatch | Hatch and bulkhead slots work up to about 1.4 m, dive planes to about 0.7 m, E-motors to about 0.6 m. If the animations look wrong, set `Hatch Slot Interaction Types` to False and report it. | - |
+| 7.6 venting and diesel draw (P9, 01 §6 #24) | Dive to 20 m without snorkel, diesel on | Watch the engine-room bilge pressure; then surface | It falls toward 0.35 atm and stops there. On the surface (deck depth under 3.5 m) it returns to about 1.00 atm within seconds. An open exterior hatch on the surface sets the tower to 1.00 at once. A working snorkel at snorkel depth keeps about 1 atm. | - |
+| 7.7 venting at 64x | Same as 7.6 | Repeat at 64x | Same end pressures, reached in about the same game time (WS7) | - |
+| 7.8 compressor (P10) | - | Run the air compressor a while | Its compartment's pressure slowly drops; at or below 0.35 atm it stops filling tanks | - |
+| 7.9 buoyancy tooltip (P12b) | Some ballast and flooding | Hover the buoyancy indicator | Vanilla text, then the ballast total, one line per tank, total hull water, and one line per compartment counted once. 5 m³ or more (galley 2 m³) is red. | - |
+| 7.10 bilge pressure (P13) | - | Hover any bilge | The last line gives air pressure in atm with two decimals, also when dry | - |
+
+### Stage 8: ballast (WS4)
+
+Set Debug on for the `exhaust blow ...` lines. Tunables are the `Exhaust Blow ...` rows in
+`data/ballast/ballast.json`.
+
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 8.1 listed (B2) | - | Wheel on the flooding-and-blowing valve station | "Blow ballast with diesel exhaust" with its icon; disabled when docked | - |
+| 8.2 gates | Submerged, or surfaced on E-motors, or ballast already dry | Hover the entry | Disabled with "The diesel must be running.", "The deck must be clear of the water." or "The ballast tanks are already empty." | - |
+| 8.3 blow (03 §6 #8) | Partly surfaced, diesels at any ahead speed | Order it | The crewman works the valve and the bar rises. The tanks empty while the HP air reading does not drop. It completes on its own (no stall at 99.9 %) and the preset shows Surface. Faster diesel speed empties faster. Vanilla blow and flood still work afterwards. | `exhaust blow complete` |
+| 8.4 cancel | During a blow | Stop the diesel, or dive | He leaves within about 3 game s and the tanks stop emptying. Waves washing over the deck do not cancel it. | `exhaust blow cancelled:` |
+| 8.5 other boat types | Type II or IX | Repeat 8.3 | Completes; no exception mentioning `ExhaustBlow` | `boat layout built:` (Debug) |
+| 8.6 save mid-blow | - | Save during a blow and load | It resumes or is gone; nothing throws | - |
+
+### Stage 9: repair parts (WS5)
+
+Set Debug on for the `dismantle: ...` and `salvage ratio: ...` lines. Patch ids: `SalvageStateRatio`,
+`SalvageProfitRatio`, `SalvageUpdateRatio`.
+
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 9.1 salvage ratio (R5) | 3 scrap in the workshop | Look at "Salvage replacement parts" | Disabled with vanilla's not-enough-scrap warning. With 9 scrap: one part about every 100 s at 1x, scrap drops by 4 each time, and the order ends with 1 left. The scrap tooltip names no ratio. | `salvage ratio: 4 scrap per part`; a `did not match` warning means vanilla 2:1 is in force |
+| 9.2 dismantle (R6) | An engineer and an intact listed device | Wheel | "Dismantle for scrap" is last, with its icon; absent for non-engineers and broken devices. Health drops one point at a time at repair speed (a Handyman about a quarter faster). At 0 the device is broken and storage gains 1 scrap (2 when Thrifty). | `dismantle: "..." taken apart for N scrap` |
+| 9.3 dismantle checks (04 Q3) | - | Try it while someone repairs, while another dismantles, on a device out of action, carrying a blocking item, at a flooded slot without a rebreather | Disabled each time | - |
+| 9.4 save mid-order | A pipe repair and a dismantle running | Save and load | Both resume or drop cleanly. The pipe's leak is not left reduced, and the dismantle does not restart from full. | - |
+
+### Stage 10: save, removal and other mods
+
+| # | Setup | Action | Expected | Grep |
+|---|---|---|---|---|
+| 10.1 pre-mod save | A save made with the mod disabled | Load it with the mod enabled; save; load again | First load: defaults created. Second load: restored. | `this save has no Damage Control settings yet; creating them with defaults`, then `campaign settings restored:` |
+| 10.2 removal | A save made with the mod | Load it with the mod disabled | At most an error about the unknown task type; the campaign plays normally | - |
+| 10.3 Custom Actions (D2) | Custom Actions enabled too | Open the Workshop wheel | Each toggle appears exactly once | - |
+| 10.4 boat layout | Debug on | Go aboard | `boat layout built:` lists each hatch's lowY and highY. The conning-tower hatch's lowY is near the control-room ceiling, and the exterior hatch's lowY is near the top of the tower. | `boat layout unknown:` means dependent features are off; report it |
+| 10.5 persistence | Every feature above that keeps state | Save, quit, reload | The state is as before (lock state, leak status, toggles). Seals return once the crew work again. | - |

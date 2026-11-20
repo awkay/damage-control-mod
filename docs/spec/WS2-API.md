@@ -65,16 +65,20 @@ substeps, at most `MaxSubsteps` = 16 (only reached past 8 game seconds per frame
 ≤ 0.5, below the 1x half-second step of 1.0). The patch runs the whole exchange (air, water, leaks, both
 passages) once per substep, re-reading both compartments each time, so the air floor, the
 no-equalization-overshoot guard and the no-overfill guard hold per substep. Frame totals match vanilla at
-any compression. `FrameStep` (one capped step) remains for the equalize action. Equalize keeps gain 1 (01 §2.11). The vertical passage is unchanged.
+any compression. The equalize action uses the same plan (`EqualizeSubsteps` = `Substeps` with each
+step divided by 10, WS7), so it loses no time either. `FrameStep`/`EqualizeStep` (one capped step) remain
+as the 1x reference. Equalize keeps gain 1 (01 §2.11). The vertical passage is unchanged. The blow-open
+hazard (H5) is rolled once per frame over the frame's whole game time
+(`HatchDamageRules.BlowOpenChanceThisFrame`, `1 - (1 - p)^dt`), not over a capped 0.5 s.
 
 ## 3. Hatch rules and kernel (Core)
 
 | Type | Use |
 |---|---|
 | `HatchLockRule.CanBeOpened(HatchLockInput)`, `DefaultThreshold` 0.9, `DeckDepthLimit` 2.5 | 02 §2.1 steps 1 to 6 |
-| `HatchExchange.Substeps(SimClock, rate)` → `FrameSubsteps`, `FrameStep(SimClock, rate)`, `EqualizeStep`, `GatedStep`, `Horizontal`, `Vertical`, `Equalize`, `Exchange(..., ExchangeProfile, step)` | the exchange kernel (02 §2.3, 01 §2.11). `HatchFlow` amounts are positive left to right. |
+| `HatchExchange.Substeps(SimClock, rate)` → `FrameSubsteps`, `EqualizeSubsteps`, `FrameStep(SimClock, rate)`, `EqualizeStep`, `GatedStep`, `Horizontal`, `Vertical`, `Equalize`, `Exchange(..., ExchangeProfile, step)` | the exchange kernel (02 §2.3, 01 §2.11). `HatchFlow` amounts are positive left to right. |
 | `HatchSide`, `HatchSide.Create(p, air, water, capacity, we, floor)` | one compartment as plain values |
-| `HatchDamageRules.CanBlowOpen`, `RollBlowOpen`, `UpkeepLeak`, `StaysShutWhenDisabled` | H5, H3 |
+| `HatchDamageRules.CanBlowOpen`, `BlowOpenChanceThisFrame`, `RollBlowOpen`, `UpkeepLeak`, `StaysShutWhenDisabled` | H5, H3 |
 | `HatchPanel.Build(HatchPanelInput, HatchPanelText)`, `Classify`, `ViewerFarSideIsRight` | H6 |
 | `EqualizeRules.IsOffered(...)`, `SortingPriority` 11 | P11 |
 | `HatchPressurePoint.Reading(isInteriorHatch, owning, pL, pR)` | **for WS1's P4 postfix** on `CompartmentPressure.Pressure`: `|pL - pR|` for an interior hatch, else the owning compartment's pressure (01 §6 #5) |

@@ -1,5 +1,5 @@
 {
-  "$comment": "WS5 rows: the dismantle order (R6), the salvage ratio tunable (R5) and the repair/scrap texts. The vanilla RepairAction1-3 and SalvageReplacementParts rows are deliberately not overridden (00 D4).",
+  "$comment": "WS5 rows: the dismantle order (R6), the salvage ratio tunable (R5) and the scrap text. The vanilla Repair / Repair (Requires Parts) labels are not overridden (known issue in README: their English, and most languages, are swapped in 2026.1, but overriding would replace all 13 translations with English). The vanilla RepairAction1-3 and SalvageReplacementParts rows are deliberately not overridden (00 D4).",
   "tables": {
     "Crew/Actions": [
       {
@@ -14,12 +14,10 @@
     "Locales/Activators": [
       { "key": "DC Dismantle", "English": "Dismantle for scrap" },
       { "key": "DC Dismantle Description", "English": "Strip this equipment down for scrap metal. It is left broken, and putting it back into service from nothing may cost a spare part. Yields one piece of scrap, two for a thrifty engineer." },
-      { "key": "DC Dismantle Progressing Description", "English": "Taking the equipment apart for scrap" },
-      { "key": "Repair", "English": "Repair", "$comment": "04 §4.2: the 2026.1 English texts of these two keys are the wrong way round." },
-      { "key": "Repair (Requires Parts)", "English": "Repair (uses <sprite name=\"Replacement Parts\">)" }
+      { "key": "DC Dismantle Progressing Description", "English": "Taking the equipment apart for scrap" }
     ],
     "Locales/Items": [
-      { "key": "Scrap Description", "English": "Engineers at the workshop can turn every 4 pieces of scrap into 1 spare part." }
+      { "key": "Scrap Description", "English": "Engineers at the workshop can salvage spare parts from scrap metal.", "$comment": "Overrides vanilla, whose text states 2:1 in every language. No number here: the ratio is the Salvage Scrap Per Part tunable. Blank languages fall back to this English (known issue, README)." }
     ]
   }
 }

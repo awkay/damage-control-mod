@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DamageControl.Core.Automation;
 using DamageControl.Core.Common;
+using DamageControl.Game.Infrastructure;
 using HarmonyLib;
 using UBOAT.Game.Scene.Entities;
 using UBOAT.Game.Scene.Items;
@@ -20,6 +21,11 @@ namespace DamageControl.Game.Automation
 	[HarmonyPatch(typeof(AutomaticActionsController), "DoUpdate")]
 	internal static class TrimPumpLeakHoldPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("TrimPumpLeakHold", ex);
+		}
+
 		private static void Prefix(ref long ___pumpDelay, out bool __state)
 		{
 			__state = false;

@@ -168,6 +168,9 @@ if (!BoatLayout.Require("Hatch exchange")) return true; // leave vanilla alone
 | API | Use |
 |---|---|
 | `GameClock.Now()`, `GameClock.FixedNow()`, `GameClock.ArtificialTimeScale` | `SimClock` for this frame |
+| `GameClock.Ticks` | the game clock (100 ns ticks, `GameTime.Ticks`), -1 outside a game; for measuring time between timed-queue runs |
+| `GameplayState.IsActive` | Gameplay state and no save loading; simulation and hatch-rule patches return to vanilla when false (`docs/PATCHES.md`) |
+| `PatchGuard.Cleanup(id, ex)` | every patch class's `static Exception Cleanup(Exception ex)` body: an apply-time failure is logged once and that class stays vanilla |
 | `UnityRandomSource.Instance` | `IRandom` in game |
 | `Tunables.GetBool/GetFloat/GetString(path, default)`, `Tunables.GetRow`, `Tunables.GetRows` | null-safe data reads; one warning per malformed row |
 | `Tunables.Root` = `"General/Settings/Damage Control/"` | put your tunables here, e.g. `Root + "Hatch Lock Threshold"` |

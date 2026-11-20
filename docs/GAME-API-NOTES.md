@@ -238,6 +238,67 @@ Notes and uncertainty:
 - **None** of the player-interior model (`Tank`, `Compartment`, `Hatch`, `ExternalPressure`,
   `LeakableEquipment`, `PlayableSubmarine`) is Burst or uses jobs.
 
+### 2.1 WS7 check: the player U-boat never floods through `Hull`'s Burst jobs (00 §4)
+
+Confirmed from the 2026.1 code. The mod's patches govern the player boat's flooding and pressure:
+
+1. **Where `[BurstCompile]` appears.** In `com.uboat.game` it appears only in `Items/Hull.cs`,
+   `Scene.Entities/UpdateObservationsJob.cs`, `Scene.Environment.Terrain/WorldSegmentGenerator.cs`,
+   `Scene.Tasks/SphereBoxIntersectionCompute.cs` (called only from `Hull`),
+   `UI/Burst_DynamicContactVisualizationUI.cs` and the assembly attributes. `Tank.cs`, `Compartment.cs`,
+   `Hatch.cs`, `ExternalPressure.cs`, `LeakableEquipment.cs`, `PressureHullHole.cs`,
+   `PlayableSubmarine.cs` and `PlayerShip.cs` have none.
+2. **How water enters the player boat.** `Tank.FixedUpdate` (managed) walks the tank's `holes` and
+   calls `Tank.SimulateBreach(ExternalPressure, bool)`. Holes are registered by
+   `ExternalPressure` and `LeakableEquipment` through `Tank.AddHole`; `PressureHullHole` is one such
+   `LeakableEquipment`. P1's prefix sits on `SimulateBreach`, and the hatch exchange (H4) moves water
+   between `Compartment`s.
+3. **Mass and trim.** `PlayableSubmarine.FixedUpdate` sets `rigidBody.mass = initialMass + Σ tank.Mass`
+   and the centre of mass from its own `Tank[] tanks` (compartments, ballast, trim, hull-internal
+   tank). It never reads `Hull`. `Hull`'s `TotalBallast` drives only a `"Flooding"` modifier on
+   `Entity.Mass`, which `PlayableSubmarine` does not use for its rigidbody.
+4. **The player has no hull model.** `PlayerShip.HasHullHoles` is a constant `false`. `Hull.Update`
+   returns at once without `hullData` (a serialized `HullData` box layout). `Hull` resolves its crew as
+   `NonPlayableCrew`, and the player crew is `PlayableCharacter`s. No code reads `PlayerShip.Hull`.
+   `Hull` is reached through `Entity.GetEquipment<Hull>()` from torpedo hits, AI behaviours, the
+   entity-selection UI and story scripting, all aimed at other entities.
+5. **Damage to the player.** `DamageUtility` routes damage on `PlayerShip` equipment through
+   `Equipment.AddDamage`, scaled by `EquipmentDamageProtection`. Holes that follow come from the
+   equipment (leaks, pressure hull holes), not from `Hull.AddBreach`.
+
+Consequence: P1, P6, P9, P10, H3 to H5 and the WS3/WS5 leak rules all act on the managed interior
+model, and no Burst path bypasses them. The only Burst code that touches the player is the
+buoyancy network (`NeuralNetworkPhysics`), which reads the mass those tanks produce.
+
+### 2.2 Time compression facts (WS7)
+
+- **Compression has two parts.** `GameTime.TimeScale_Changed` sets Unity's `Time.timeScale` and
+  lengthens the fixed step to `fixedDeltaTime x (1 + (S - 1) / 2)`. The base step is 0.01333 s, so it
+  is about 0.22 s at 32x and 0.43 s at 64x. It also sets `Time.maximumDeltaTime` to the same value,
+  which caps one Update frame's scaled delta. `GameTime.ArtificialTimeScale` multiplies on top. Game
+  time per frame is `Time.deltaTime x ArtificialTimeScale`, which is `SimClock.GameDt`.
+- **Timed listeners run once per frame at most.** `ExecutionQueue.RunTimedUpdates` runs each due
+  listener once, then reschedules it at `now + returned interval`. It does not catch up, so a listener
+  that asks for 1 s runs once per frame whenever a frame is longer than 1 game second. Its real interval
+  is then the frame. `Compartment.LowFrequencyUpdate` is on the Normal queue, whose clock is
+  `GameTime.Ticks`. The mod measures the elapsed ticks per compartment for that reason.
+- **Per-frame vanilla code.** `AirCompressor.Update` integrates the whole frame in chunks of at most 4 s.
+  `Hatch.DoUpdate` clamps the frame's step at 8. `RepairAction.UpdateAction` applies at most one health
+  point per frame. That last one is vanilla behaviour and not changed by the mod.
+- **Audit of the mod's own accumulators (WS7).**
+
+  | Accumulator | Basis | Finding |
+  |---|---|---|
+  | Hatch exchange | substeps of at most 0.5 s, total clamped at vanilla's 8 | OK |
+  | Equalize | was one capped 0.5 s step per frame, which lost time above about 0.5 game s per frame | **fixed**: same substeps (`EqualizeSubsteps`) |
+  | Blow-open hazard | was rolled over a capped 0.5 s | **fixed**: rolled over the whole frame |
+  | Compartment tick | was rolled over a fixed 1 s | **fixed**: rolled over the elapsed game ticks per compartment, capped at 60 s |
+  | Venting and diesel draw | was one step with caps per physics step, which lost time once compression lengthened the step | **fixed**: 1/75 s substeps with pressures carried forward |
+  | Compressor draw | follows vanilla's 4 s chunks; the cost cap scales with the chunk count | OK |
+  | Exhaust blow | full frame dt, clamped at 5 s per frame against load hitches | OK up to 5 game s per frame, far above 64x frames (at most about 0.43 s x artificial scale) |
+  | Repair leak throttle | a state (1 - progress), not an accumulator | OK |
+  | Dismantle | full frame dt; several health points per frame if due | OK |
+
 ## 3. Crew actions and the interaction wheel
 
 Namespaces `UBOAT.Game.Scene.Characters.Actions` and `...Characters.Activators`.

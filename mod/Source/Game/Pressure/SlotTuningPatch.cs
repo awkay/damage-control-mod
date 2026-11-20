@@ -23,6 +23,11 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(Compartment), "AddInteractableSlot")]
 	internal static class SlotTuningPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("SlotTuning", ex);
+		}
+
 		private const string DefaultSlotTag = "Default";
 		private const string InteractionTypesPath = Tunables.Root + "Hatch Slot Interaction Types";
 

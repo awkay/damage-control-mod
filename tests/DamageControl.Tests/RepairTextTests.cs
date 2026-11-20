@@ -47,22 +47,20 @@ namespace DamageControl.Tests
         }
 
         [Fact]
-        public void RepairLabelsAreOverriddenSoEachReadsNaturally()
+        public void VanillaRepairLabelsAreNotOverridden()
         {
-            string plain = RepoData.English(RepairText.ActivatorsSheet, RepairText.RepairKeyword);
-            string parts = RepoData.English(RepairText.ActivatorsSheet, RepairText.RepairRequiresPartsKeyword);
-            Assert.False(string.IsNullOrWhiteSpace(plain));
-            Assert.DoesNotContain("Replacement Parts", plain);
-            Assert.Contains("<sprite name=\"Replacement Parts\">", parts);
+            // An English-only override would replace all 13 translations with English (known issue in README).
+            var keys = RepoData.Rows("Locales/Activators").Select(r => r["key"]).ToArray();
+            Assert.DoesNotContain(RepairText.RepairKeyword, keys);
+            Assert.DoesNotContain(RepairText.RepairRequiresPartsKeyword, keys);
         }
 
         [Fact]
-        public void ScrapDescriptionStatesFourToOne()
+        public void ScrapDescriptionNamesNoRatioBecauseTheRatioIsTunable()
         {
             string text = RepoData.English(RepairText.ItemsSheet, RepairText.ScrapDescription);
-            Assert.Contains("4", text);
-            Assert.Contains("1", text);
-            Assert.DoesNotContain("2:1", text);
+            Assert.False(string.IsNullOrWhiteSpace(text));
+            Assert.DoesNotMatch("[0-9]", text);
         }
 
         [Fact]

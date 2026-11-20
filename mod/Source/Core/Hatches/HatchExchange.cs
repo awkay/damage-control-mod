@@ -228,10 +228,21 @@ namespace DamageControl.Core.Hatches
 			return Substeps(clock, DefaultRate);
 		}
 
-		/// <summary>Equalize factor k of 01 §2.11: the hatch step / 10 (0.2/s at 1x).</summary>
+		/// <summary>Equalize factor k of 01 §2.11 for one capped frame: the hatch step / 10 (0.2/s at 1x).</summary>
 		public static float EqualizeStep(SimClock clock, float baseRate)
 		{
 			return FrameStep(clock, baseRate) / EqualizeDivisor;
+		}
+
+		/// <summary>
+		/// The equalize action on the same basis as the hatch exchange (C2 note): the frame's
+		/// <see cref="Substeps"/>, each step divided by <see cref="EqualizeDivisor"/>. No game time is lost
+		/// above the 0.5 s cap, and each substep stays as stable as one capped frame.
+		/// </summary>
+		public static FrameSubsteps EqualizeSubsteps(SimClock clock, float baseRate)
+		{
+			FrameSubsteps frame = Substeps(clock, baseRate);
+			return new FrameSubsteps(frame.Count, frame.Step / EqualizeDivisor);
 		}
 
 		/// <summary>

@@ -26,12 +26,17 @@ namespace DamageControl.Game.Pressure
 	[HarmonyPatch(typeof(AirCompressor), "Update")]
 	internal static class CompressorDrawPatch
 	{
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("CompressorDraw", ex);
+		}
+
 		private static bool Prefix(AirCompressor __instance, Tank[] ___tanks, Parameter ___oxygenCompression, float ___maxPressure, out CompressorFrame __state)
 		{
 			__state = new CompressorFrame();
 			try
 			{
-				if (___tanks == null || ___tanks.Length == 0 || ___oxygenCompression == null)
+				if (___tanks == null || ___tanks.Length == 0 || ___oxygenCompression == null || !GameplayState.IsActive)
 					return true;
 				Compartment room = PressureLayout.CompartmentOf(__instance);
 				if (room == null)

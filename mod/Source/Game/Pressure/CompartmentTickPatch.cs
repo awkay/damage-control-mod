@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DamageControl.Core.Common;
 using DamageControl.Core.Pressure;
 using DamageControl.Game.Infrastructure;
+using DamageControl.Game.Settings;
 using HarmonyLib;
 using UBOAT.Game.Scene.Interactions;
 using UBOAT.Game.Scene.Items;
@@ -22,13 +23,41 @@ namespace DamageControl.Game.Pressure
 	/// <item>interaction slots are underwater from their own compartment's water, from any containing
 	/// neighbour's water (D7 "any side"), or always while the air is unbreathable (C24).</item>
 	/// </list>
-	/// On an exception the prefix lets vanilla run for that tick.
+	/// Damage chances are rolled over the game time since the compartment's previous tick, which exceeds
+	/// 1 s at high compression. Outside gameplay, and on an exception, vanilla runs for that tick.
 	/// </summary>
 	[HarmonyPatch(typeof(Compartment), "LowFrequencyUpdate")]
 	internal static class CompartmentTickPatch
 	{
 		private static float[] neighbourWater = new float[4];
 		private static float[] containingWater = new float[4];
+
+		// Game clock (ticks) of each compartment's previous tick; session-only.
+		private static readonly Dictionary<Compartment, long> lastTicks = new Dictionary<Compartment, long>();
+		private static bool sessionHooked;
+
+		private static Exception Cleanup(Exception ex)
+		{
+			return PatchGuard.Cleanup("CompartmentTick", ex);
+		}
+
+		/// <summary>Game seconds since this compartment's previous tick (<see cref="CompartmentTick.ElapsedSeconds"/>).</summary>
+		private static float Elapsed(Compartment compartment)
+		{
+			if (!sessionHooked)
+			{
+				sessionHooked = true;
+				DcSettings.SessionStarted += lastTicks.Clear;
+			}
+			long now = GameClock.Ticks;
+			if (now < 0)
+				return CompartmentTick.TickSeconds;
+			long previous;
+			if (!lastTicks.TryGetValue(compartment, out previous))
+				previous = -1L;
+			lastTicks[compartment] = now;
+			return CompartmentTick.ElapsedSeconds(previous, now);
+		}
 
 		private static bool Prefix(
 			Compartment __instance,
@@ -39,13 +68,16 @@ namespace DamageControl.Game.Pressure
 		{
 			try
 			{
+				if (!GameplayState.IsActive)
+					return true;
+				float elapsed = Elapsed(__instance);
 				IRandom random = UnityRandomSource.Instance;
 				double pressure = __instance.AirPressure;
 				float waterElevation = __instance.WaterElevation;
 				float waterAboveFloor = __instance.WaterElevationAboveFloor;
 
-				TickBulbs(___devices, pressure, waterElevation, random);
-				TickPressurePoints(___pressurizedEquipment, waterAboveFloor, random);
+				TickBulbs(___devices, pressure, waterElevation, random, elapsed);
+				TickPressurePoints(___pressurizedEquipment, waterAboveFloor, random, elapsed);
 				TickSlots(__instance, ___interactableSlots, waterAboveFloor);
 
 				__result = CompartmentTick.TickSeconds;
@@ -58,7 +90,7 @@ namespace DamageControl.Game.Pressure
 			}
 		}
 
-		private static void TickBulbs(Device[] devices, double pressure, float waterElevation, IRandom random)
+		private static void TickBulbs(Device[] devices, double pressure, float waterElevation, IRandom random, float elapsed)
 		{
 			if (devices == null || !(pressure > CompartmentTick.BulbSubmergedRiskPressure))
 				return; // no bulb can be at risk at or below 4 atm
@@ -69,12 +101,12 @@ namespace DamageControl.Game.Pressure
 					continue;
 				bool submerged = waterElevation > bulb.transform.position.y;
 				float chance = CompartmentTick.BulbDamageChance(submerged, pressure, bulb.Health);
-				if (chance > 0f && Probability.Roll(random, chance, CompartmentTick.TickSeconds))
+				if (chance > 0f && Probability.Roll(random, chance, elapsed))
 					bulb.AddWaterDamage(1f, true);
 			}
 		}
 
-		private static void TickPressurePoints(List<CompartmentPressure> points, float waterAboveFloor, IRandom random)
+		private static void TickPressurePoints(List<CompartmentPressure> points, float waterAboveFloor, IRandom random, float elapsed)
 		{
 			if (points == null)
 				return;
@@ -92,7 +124,7 @@ namespace DamageControl.Game.Pressure
 				if (!overstressed || !(target.Health > 0f))
 					continue;
 				float chance = CompartmentTick.OverstressDamageChance(target.InteriorPressureDurability.Value);
-				if (chance > 0f && Probability.Roll(random, chance, CompartmentTick.TickSeconds))
+				if (chance > 0f && Probability.Roll(random, chance, elapsed))
 					target.AddWaterDamage(1f, true);
 			}
 		}
