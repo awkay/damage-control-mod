@@ -1,6 +1,8 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Core.Diagnostics;
 using DamageControl.Core.Hatches;
+using DamageControl.Game.Diagnostics;
 using DamageControl.Game.Infrastructure;
 using DWS.Common.InjectionFramework;
 using HarmonyLib;
@@ -27,6 +29,8 @@ namespace DamageControl.Game.Hatches
 	/// <item>f/g. vertical or horizontal exchange through the Core kernel.</item>
 	/// </list>
 	/// When the hatch has no usable geometry, or on any exception, vanilla runs instead.
+	/// Each frame's moved air and water are also handed to <see cref="DiagRecorder"/> for the diagnostics
+	/// report (a no-op unless diagnostics are on; nothing is read back).
 	/// </summary>
 	[HarmonyPatch(typeof(Hatch), "DoUpdate")]
 	internal static class HatchDoUpdatePatch
@@ -72,18 +76,25 @@ namespace DamageControl.Game.Hatches
 				bool open = !__instance.Locked;
 				bool leaking = !open && __instance.HasStatus<Leaking>();
 				float gated = HatchExchange.GatedStep(substeps.Step, open, leaking, HatchSeals.Shared.SealFactor(__instance));
+				DiagRecorder recorder = DiagRecorder.Shared;
 				if (!open && !leaking)
 				{
 					SetJets(___flowEffectLeft, ___flowEffectRight, JetEffect.None);
+					recorder.RecordHatch(__instance, 0.0, 0.0, clock.GameDt);
 					return false;
 				}
 				if (gated <= 0f || HatchRuntime.SameWaterBody(left, right))
+				{
+					recorder.RecordHatch(__instance, 0.0, 0.0, clock.GameDt);
 					return false;
+				}
 
 				// Each substep re-reads both compartments, so the kernel's guards (air floor, no
 				// equalization overshoot, no overfill) hold per substep against the current state.
 				float verticalOpening = HatchExchange.VerticalOpeningHeight(geometry.LowY, left.FloorElevation);
 				JetEffect jet = JetEffect.None;
+				double movedAir = 0.0;
+				double movedWater = 0.0;
 				for (int i = 0; i < substeps.Count; i++)
 				{
 					HatchSide l = HatchRuntime.ReadSide(left);
@@ -92,11 +103,14 @@ namespace DamageControl.Game.Hatches
 						? HatchExchange.Vertical(l, r, verticalOpening, gated)
 						: HatchExchange.Horizontal(l, r, geometry, gated);
 					HatchRuntime.Apply(left, right, flow);
+					movedAir += flow.Air;
+					movedWater += flow.Water;
 					jet = ___verticalPassage ? JetEffect.None : flow.Jet;
 					if (flow.Air == 0.0 && flow.Water == 0.0)
 						break; // at rest: later substeps would see the same state
 				}
 				SetJets(___flowEffectLeft, ___flowEffectRight, jet);
+				recorder.RecordHatch(__instance, movedAir, movedWater, clock.GameDt);
 				return false;
 			}
 			catch (Exception e)
@@ -156,6 +170,7 @@ namespace DamageControl.Game.Hatches
 							clip.Play();
 					}
 					DcLog.Debug("hatch \"" + hatch.name + "\" blown open by the pressure behind it");
+					DiagnosticsRuntime.OnHatchBlownOpen(hatch, seat.AirPressure, far.AirPressure);
 				}
 			}
 

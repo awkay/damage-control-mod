@@ -17,17 +17,20 @@ namespace DamageControl.Tests
             Assert.False(SettingsCatalog.DefaultValue(SettingId.HatchPressureBlocking));
             Assert.True(SettingsCatalog.DefaultValue(SettingId.AutoLeakBlocking));
             Assert.True(SettingsCatalog.DefaultValue(SettingId.AutoCarryWounded));
+            Assert.False(SettingsCatalog.DefaultValue(SettingId.Diagnostics));
 
             var model = SettingsModel.CreateDefaults();
             Assert.False(model.HatchPressureBlocking);
             Assert.True(model.AutoLeakBlocking);
             Assert.True(model.AutoCarryWounded);
+            Assert.False(model.Diagnostics);
         }
 
         [Theory]
         [InlineData(SettingId.HatchPressureBlocking)]
         [InlineData(SettingId.AutoLeakBlocking)]
         [InlineData(SettingId.AutoCarryWounded)]
+        [InlineData(SettingId.Diagnostics)]
         public void TwoTogglesReturnToTheOriginalState(SettingId id)
         {
             // 02 §6 #17, 01 §6 #23.
@@ -42,17 +45,21 @@ namespace DamageControl.Tests
         [Fact]
         public void ToggleChangesOnlyItsOwnSetting()
         {
-            var model = new SettingsModel(false, false, false);
+            var model = new SettingsModel(false, false, false, false);
             model.Toggle(SettingId.AutoLeakBlocking);
             Assert.False(model.HatchPressureBlocking);
             Assert.True(model.AutoLeakBlocking);
             Assert.False(model.AutoCarryWounded);
+            Assert.False(model.Diagnostics);
+            model.Toggle(SettingId.Diagnostics);
+            Assert.True(model.Diagnostics);
+            Assert.True(model.AutoLeakBlocking);
         }
 
         [Fact]
         public void SetReportsWhetherTheValueChanged()
         {
-            var model = new SettingsModel(false, true, true);
+            var model = new SettingsModel(false, true, true, false);
             Assert.False(model.Set(SettingId.AutoLeakBlocking, true));
             Assert.True(model.Set(SettingId.AutoLeakBlocking, false));
             Assert.False(model.AutoLeakBlocking);
@@ -66,13 +73,14 @@ namespace DamageControl.Tests
             model.Toggle(SettingId.HatchPressureBlocking);
             Assert.Equal("DC Disable Hatch Pressure Blocking", model.ToggleKeyword(SettingId.HatchPressureBlocking));
             Assert.Equal("DC Disable Automatic Leak Blocking", model.ToggleKeyword(SettingId.AutoLeakBlocking));
+            Assert.Equal("DC Enable Diagnostics", model.ToggleKeyword(SettingId.Diagnostics));
         }
 
         [Fact]
         public void KeywordsAreDistinctAndPrefixed()
         {
             var all = SettingsCatalog.AllToggleKeywords().ToList();
-            Assert.Equal(6, all.Count);
+            Assert.Equal(8, all.Count);
             Assert.Equal(all.Count, all.Distinct().Count());
             Assert.All(all, k => Assert.StartsWith(IconKeys.IconNamePrefix, k));
         }
@@ -81,6 +89,7 @@ namespace DamageControl.Tests
         [InlineData("HatchPressureBlocking", SettingId.HatchPressureBlocking)]
         [InlineData(" autoleakblocking ", SettingId.AutoLeakBlocking)]
         [InlineData("AUTOCARRYWOUNDED", SettingId.AutoCarryWounded)]
+        [InlineData("Diagnostics", SettingId.Diagnostics)]
         public void ParsesRowParameter(string text, SettingId expected)
         {
             SettingId id;
@@ -106,6 +115,14 @@ namespace DamageControl.Tests
             var b = a.Clone();
             b.Toggle(SettingId.HatchPressureBlocking);
             Assert.False(a.HatchPressureBlocking);
+            var c = new SettingsModel(false, true, true, true).Clone();
+            Assert.True(c.Diagnostics);
+        }
+
+        [Fact]
+        public void DescriptionNamesEverySetting()
+        {
+            Assert.Equal("HatchPressureBlocking=False, AutoLeakBlocking=True, AutoCarryWounded=True, Diagnostics=False", SettingsModel.CreateDefaults().ToString());
         }
 
         [Fact]

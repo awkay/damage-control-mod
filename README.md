@@ -51,7 +51,7 @@ Players: install, settings and every feature are explained in the [player manual
 
 ## Settings
 
-Three per-campaign toggles sit on the **Workshop** interaction wheel (stern torpedo room). They are
+Four per-campaign toggles sit on the **Workshop** interaction wheel (stern torpedo room). They are
 saved with the campaign and take effect at once.
 
 | Toggle | Default |
@@ -59,6 +59,7 @@ saved with the campaign and take effect at once.
 | Hatch pressure blocking | Off |
 | Sailors block leaks on their own | On (vanilla behaviour) |
 | Crew carry the wounded on their own | On (vanilla behaviour) |
+| Damage Control diagnostics (a periodic `[DC diag]` report in the game log) | Off |
 
 Advanced numbers live in the mod's data rows under `General/Settings/Damage Control`, in
 `data/<area>/*.json`. Examples are `Hatch Lock Threshold` (0.9 atm), `Hatch Flow Rate` (2),

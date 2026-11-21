@@ -73,6 +73,12 @@ namespace DamageControl.Game.Settings
 			get { return Get(SettingId.AutoCarryWounded); }
 		}
 
+		/// <summary>Diagnostics report in the log ("[DC diag]" lines). Default off.</summary>
+		public static bool Diagnostics
+		{
+			get { return Get(SettingId.Diagnostics); }
+		}
+
 		public static bool Get(SettingId id)
 		{
 			SettingsModel current = model;

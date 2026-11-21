@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DamageControl.Core.Settings
 {
 	/// <summary>
-	/// The per-campaign player settings (R9, P14, H12, H13). Values are persisted by the Game layer's
+	/// The per-campaign player settings (R9, P14, H12, H13, diagnostics). Values are persisted by the Game layer's
 	/// settings task under field names derived from these; append new members, never renumber.
 	/// </summary>
 	public enum SettingId
@@ -17,20 +17,23 @@ namespace DamageControl.Core.Settings
 
 		/// <summary>H13: the vanilla routine that carries wounded crew to safety may run (WS3).</summary>
 		AutoCarryWounded = 2,
+
+		/// <summary>Diagnostics: a periodic "[DC diag]" report of air, water, leaks and hatch flows in the log.</summary>
+		Diagnostics = 3,
 	}
 
 	/// <summary>Static facts about each setting: defaults (D3), data-sheet names and the wheel label keywords.</summary>
 	public static class SettingsCatalog
 	{
 		/// <summary>Every setting, in display order.</summary>
-		public static readonly SettingId[] All = { SettingId.HatchPressureBlocking, SettingId.AutoLeakBlocking, SettingId.AutoCarryWounded };
+		public static readonly SettingId[] All = { SettingId.HatchPressureBlocking, SettingId.AutoLeakBlocking, SettingId.AutoCarryWounded, SettingId.Diagnostics };
 
 		/// <summary>Name of the Crew/Actions row parameter that tells a toggle row which setting it flips.</summary>
 		public const string ToggleRowParameter = "Setting";
 
 		/// <summary>
 		/// D3: vanilla automatic leak blocking and automatic carrying of wounded stay on (the mod only adds
-		/// an off switch); hatch pressure blocking is opt-in. Pre-mod saves and new campaigns both get these.
+		/// an off switch); hatch pressure blocking and diagnostics are opt-in. Pre-mod saves and new campaigns both get these.
 		/// </summary>
 		public static bool DefaultValue(SettingId id)
 		{
@@ -42,6 +45,8 @@ namespace DamageControl.Core.Settings
 					return true;
 				case SettingId.AutoCarryWounded:
 					return true;
+				case SettingId.Diagnostics:
+					return false;
 				default:
 					throw new ArgumentOutOfRangeException("id", id, "unknown setting");
 			}
@@ -107,6 +112,8 @@ namespace DamageControl.Core.Settings
 					return "Automatic Leak Blocking";
 				case SettingId.AutoCarryWounded:
 					return "Automatic Wounded Carrying";
+				case SettingId.Diagnostics:
+					return "Diagnostics";
 				default:
 					throw new ArgumentOutOfRangeException("id", id, "unknown setting");
 			}
@@ -122,12 +129,14 @@ namespace DamageControl.Core.Settings
 		private bool hatchPressureBlocking;
 		private bool autoLeakBlocking;
 		private bool autoCarryWounded;
+		private bool diagnostics;
 
-		public SettingsModel(bool hatchPressureBlocking, bool autoLeakBlocking, bool autoCarryWounded)
+		public SettingsModel(bool hatchPressureBlocking, bool autoLeakBlocking, bool autoCarryWounded, bool diagnostics)
 		{
 			this.hatchPressureBlocking = hatchPressureBlocking;
 			this.autoLeakBlocking = autoLeakBlocking;
 			this.autoCarryWounded = autoCarryWounded;
+			this.diagnostics = diagnostics;
 		}
 
 		/// <summary>A model holding the D3 defaults.</summary>
@@ -136,7 +145,8 @@ namespace DamageControl.Core.Settings
 			return new SettingsModel(
 				SettingsCatalog.DefaultValue(SettingId.HatchPressureBlocking),
 				SettingsCatalog.DefaultValue(SettingId.AutoLeakBlocking),
-				SettingsCatalog.DefaultValue(SettingId.AutoCarryWounded));
+				SettingsCatalog.DefaultValue(SettingId.AutoCarryWounded),
+				SettingsCatalog.DefaultValue(SettingId.Diagnostics));
 		}
 
 		public bool HatchPressureBlocking
@@ -154,6 +164,11 @@ namespace DamageControl.Core.Settings
 			get { return autoCarryWounded; }
 		}
 
+		public bool Diagnostics
+		{
+			get { return diagnostics; }
+		}
+
 		public bool Get(SettingId id)
 		{
 			switch (id)
@@ -164,6 +179,8 @@ namespace DamageControl.Core.Settings
 					return autoLeakBlocking;
 				case SettingId.AutoCarryWounded:
 					return autoCarryWounded;
+				case SettingId.Diagnostics:
+					return diagnostics;
 				default:
 					throw new ArgumentOutOfRangeException("id", id, "unknown setting");
 			}
@@ -183,6 +200,9 @@ namespace DamageControl.Core.Settings
 					break;
 				case SettingId.AutoCarryWounded:
 					autoCarryWounded = value;
+					break;
+				case SettingId.Diagnostics:
+					diagnostics = value;
 					break;
 			}
 			return old != value;
@@ -204,12 +224,12 @@ namespace DamageControl.Core.Settings
 
 		public SettingsModel Clone()
 		{
-			return new SettingsModel(hatchPressureBlocking, autoLeakBlocking, autoCarryWounded);
+			return new SettingsModel(hatchPressureBlocking, autoLeakBlocking, autoCarryWounded, diagnostics);
 		}
 
 		public override string ToString()
 		{
-			return "HatchPressureBlocking=" + hatchPressureBlocking + ", AutoLeakBlocking=" + autoLeakBlocking + ", AutoCarryWounded=" + autoCarryWounded;
+			return "HatchPressureBlocking=" + hatchPressureBlocking + ", AutoLeakBlocking=" + autoLeakBlocking + ", AutoCarryWounded=" + autoCarryWounded + ", Diagnostics=" + diagnostics;
 		}
 	}
 

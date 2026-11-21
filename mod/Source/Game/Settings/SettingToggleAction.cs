@@ -11,7 +11,7 @@ using GameActivator = UBOAT.Game.Scene.Characters.Activators.Activator;
 namespace DamageControl.Game.Settings
 {
 	/// <summary>
-	/// One of the three settings toggles (P14, H12, H13 toggle actions). Rows in Crew/Actions name this
+	/// One of the settings toggles (P14, H12, H13 and diagnostics toggle actions). Rows in Crew/Actions name this
 	/// type and pick the setting with the row parameter "Setting = &lt;SettingId&gt;". Hosted on the vanilla
 	/// Workshop activator (D2), contexts Normal, Queue and NoCharacter (C6).
 	///
