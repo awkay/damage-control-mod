@@ -4,7 +4,7 @@
 Stdlib only. Usage:
     python3 tools/placeholder-icons/make_icons.py OUT_DIR GLYPH:BADGE:"Icon Name" ...
 
-GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust, dismantle.
+GLYPH is one of: hatch, drop, cross, gauge, valve, wrench, generic, exhaust, dismantle, log.
 BADGE is one of: none, on, off (a tick or a slash overlapping the glyph's lower-right).
 Glyphs are centred by bounding box and badges kept off the canvas edge, because the game's
 wheel draws icons larger than their segment. Regenerate every shipped icon with ./regen.
@@ -73,6 +73,9 @@ GLYPHS = {
     # dismantle (WS5): a spanner with loose pieces falling away from it
     "dismantle": lambda: union(line(26, 92, 58, 60, 12), minus(disc(64, 52, 18), rect(60, 26, 96, 56)),
                                rect(80, 80, 94, 94), rect(98, 62, 110, 74), rect(66, 100, 78, 112)),
+    # log (diagnostics): a sheet of paper with written lines and a folded corner
+    "log": lambda: union(minus(rect(26, 16, 86, 104), rect(33, 23, 79, 97)), rect(39, 36, 73, 42),
+                         rect(39, 52, 73, 58), rect(39, 68, 73, 74), rect(39, 84, 61, 90)),
 }
 
 BADGES = {

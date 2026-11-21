@@ -1,5 +1,7 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Core.Diagnostics;
+using DamageControl.Game.Diagnostics;
 using DamageControl.Core.Pressure;
 using DamageControl.Game.Infrastructure;
 using HarmonyLib;
@@ -14,7 +16,8 @@ namespace DamageControl.Game.Pressure
 	/// draw air from its compartment (<see cref="Venting"/>). Uses the step's game time
 	/// (GameClock.FixedNow), integrated in 1/75 s substeps so the per-step caps lose nothing under
 	/// compression (<see cref="Venting.Integrate"/>). Compartments come from <see cref="PressureLayout"/>;
-	/// when the layout is unknown the feature stays off.
+	/// when the layout is unknown the feature stays off. The applied air changes are also handed to
+	/// <see cref="DiagRecorder"/> for the diagnostics report (a no-op unless diagnostics are on).
 	/// </summary>
 	[HarmonyPatch(typeof(PlayerShip), "FixedUpdate")]
 	internal static class VentingPatch
@@ -62,6 +65,14 @@ namespace DamageControl.Game.Pressure
 				VentingResult result = Venting.Integrate(input);
 				Apply(tower, result.TowerAirDelta);
 				Apply(diesel, result.DieselAirDelta);
+				DiagRecorder recorder = DiagRecorder.Shared;
+				if (recorder.Enabled)
+				{
+					if (tower != null)
+						recorder.Add(DiagnosticsRuntime.TowerKey, result.TowerAirDelta, tower.name);
+					if (diesel != null)
+						recorder.Add(DiagnosticsRuntime.DieselKey, result.DieselAirDelta, diesel.name);
+				}
 			}
 			catch (Exception e)
 			{

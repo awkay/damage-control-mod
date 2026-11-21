@@ -64,7 +64,23 @@ Columns:
 | `RepairAction.GetState(5 args)` | `RepairStatePatch` | WS5 (+WS3 step) | postfix | | - | R1: offer the repair through a free Block Leak slot. P8: greyed out while two others already work a shared leak. |
 | `RepairAction.UpdateAction` | `RepairUpdatePatch` | WS5 | postfix | | - | R2 leak throttle, R3 one close, repair seal on hatches. |
 | `RepairAction.StopMainCharacter` | `RepairStopPatch` | WS5 | postfix | | - | R2/R3 cleanup. |
+| `PlayerShip.Update` (private) | `DiagnosticsTickPatch` | Diagnostics | postfix, read-only | | G | Drives the `[DC diag]` report and event lines while the diagnostics setting is on (`Game/Diagnostics`). Changes no game state. |
 | `SalvageReplacementParts.GetState` / `GetActionProfit` / `UpdateAction` | `SalvageStateRatioPatch`, `SalvageProfitRatioPatch`, `SalvageUpdateRatioPatch` | WS5 | transpilers | | - | R5: `2f` -> tunable scrap per part. If any of the three fails to match, or is not applied, all three stay at vanilla's 2. |
+
+## Diagnostics instrumentation
+
+The diagnostics report adds one patch of its own (`DiagnosticsTickPatch`, above) and reads everything
+else from the game. Three existing patches also hand values they already computed to
+`Core/Diagnostics/DiagRecorder.Shared`, which nothing in the simulation reads back:
+
+| Patch | What it records | Cost when diagnostics are off |
+|---|---|---|
+| `HatchDoUpdatePatch` (WS2) | per hatch and frame: the air and water its substeps moved (left to right), and the frame's game seconds; zero on frames where the hatch is shut tight or at rest | one call per hatch per frame that returns at once |
+| `VentingPatch` (WS1) | the tower and diesel compartments' applied air change | one field read per physics step |
+| `CompressorDrawPatch` (WS1) | the air charged to the compressor's room | one field read per compressor frame |
+| `HatchDoUpdatePatch` (WS2), blow-open | calls `DiagnosticsRuntime.OnHatchBlownOpen` for the immediate event line | nothing (returns at once) |
+
+None of these changes a value, a branch or an early return of the patch it sits in.
 
 ## Cross-workstream interactions (WS7 audit)
 

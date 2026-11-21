@@ -33,6 +33,7 @@ namespace DamageControl.Game.Settings
 		private bool hatchPressureBlocking = SettingsCatalog.DefaultValue(SettingId.HatchPressureBlocking);
 		private bool autoLeakBlocking = SettingsCatalog.DefaultValue(SettingId.AutoLeakBlocking);
 		private bool autoCarryWounded = SettingsCatalog.DefaultValue(SettingId.AutoCarryWounded);
+		private bool diagnostics = SettingsCatalog.DefaultValue(SettingId.Diagnostics); // added after 0.1.0 saves: older saves keep this default (off)
 
 		public override void Load(GameDataRow data)
 		{
@@ -58,7 +59,7 @@ namespace DamageControl.Game.Settings
 
 		internal SettingsModel ToModel()
 		{
-			return new SettingsModel(hatchPressureBlocking, autoLeakBlocking, autoCarryWounded);
+			return new SettingsModel(hatchPressureBlocking, autoLeakBlocking, autoCarryWounded, diagnostics);
 		}
 
 		internal void Store(SettingsModel model)
@@ -66,6 +67,7 @@ namespace DamageControl.Game.Settings
 			hatchPressureBlocking = model.HatchPressureBlocking;
 			autoLeakBlocking = model.AutoLeakBlocking;
 			autoCarryWounded = model.AutoCarryWounded;
+			diagnostics = model.Diagnostics;
 		}
 	}
 }

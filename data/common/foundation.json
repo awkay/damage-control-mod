@@ -1,5 +1,5 @@
 {
-  "$comment": "WS0 rows: settings store, tunables, the three settings toggles on the Workshop activator, and their text.",
+  "$comment": "WS0 rows: settings store, tunables, the four settings toggles on the Workshop activator, and their text.",
   "tables": {
     "General/Background Tasks": [
       { "key": "DamageControlSettings", "Class": "DamageControl.Game.Settings.DamageControlSettingsTask", "Start Event": "CampaignStart" }
@@ -10,7 +10,8 @@
     "Crew/Actions": [
       { "key": "DCToggleHatchPressureBlocking", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = HatchPressureBlocking" },
       { "key": "DCToggleAutoLeakBlocking", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = AutoLeakBlocking" },
-      { "key": "DCToggleAutoCarryWounded", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = AutoCarryWounded" }
+      { "key": "DCToggleAutoCarryWounded", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = AutoCarryWounded" },
+      { "key": "DCToggleDiagnostics", "Type": "DamageControl.Game.Settings.SettingToggleAction", "Activator Tags": "Workshop", "Character Tags": "*", "Character Tags (Soft Req)": "*", "Contexts": "Normal, Queue, NoCharacter", "…": "Setting = Diagnostics" }
     ],
     "Locales/Activators": [
       { "key": "DC Enable Hatch Pressure Blocking", "English": "Enable hatch pressure blocking" },
@@ -24,7 +25,11 @@
       { "key": "DC Enable Automatic Wounded Carrying", "English": "Let the crew carry the wounded to safety" },
       { "key": "DC Enable Automatic Wounded Carrying Description", "English": "Crewmen will again carry injured shipmates out of danger without waiting for an order." },
       { "key": "DC Disable Automatic Wounded Carrying", "English": "Stop the crew carrying the wounded on their own" },
-      { "key": "DC Disable Automatic Wounded Carrying Description", "English": "Injured crewmen stay where they fell until you send someone to help. Divers are still pulled back aboard." }
+      { "key": "DC Disable Automatic Wounded Carrying Description", "English": "Injured crewmen stay where they fell until you send someone to help. Divers are still pulled back aboard." },
+      { "key": "DC Enable Diagnostics", "English": "Turn on Damage Control diagnostics" },
+      { "key": "DC Enable Diagnostics Description", "English": "Every 10 seconds the game log (output_log.txt) gets a short report of air pressure, water, leaks and hatch flows, marked [DC diag]. Changes nothing in play. Useful for bug reports." },
+      { "key": "DC Disable Diagnostics", "English": "Turn off Damage Control diagnostics" },
+      { "key": "DC Disable Diagnostics Description", "English": "Stop writing the [DC diag] report to the game log." }
     ]
   }
 }

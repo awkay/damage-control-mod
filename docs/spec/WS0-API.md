@@ -111,8 +111,8 @@ These are the conventions for icons and action rows (sections 5 and 6). `IconKey
 Core, `DamageControl.Core.Settings`:
 
 ```csharp
-enum SettingId { HatchPressureBlocking, AutoLeakBlocking, AutoCarryWounded }
-bool   SettingsCatalog.DefaultValue(SettingId)    // D3: false, true, true
+enum SettingId { HatchPressureBlocking, AutoLeakBlocking, AutoCarryWounded, Diagnostics }
+bool   SettingsCatalog.DefaultValue(SettingId)    // D3: false, true, true; diagnostics false
 string SettingsCatalog.ToggleKeyword(SettingId, bool current)  // "DC Enable ..." / "DC Disable ..."
 class SettingsModel { Get, Set, Toggle, ToggleKeyword, CreateDefaults() }
 ```
@@ -123,6 +123,7 @@ Game, `DamageControl.Game.Settings.DcSettings` (static; main thread):
 bool DcSettings.HatchPressureBlocking   // WS2 H1: gate the CanBeOpened postfix on this
 bool DcSettings.AutoLeakBlocking        // WS3 H12: gate LeakBlockingBySailors.DoUpdate
 bool DcSettings.AutoCarryWounded        // WS3 H13: gate AutoCarryWoundedToSafety (not the diver pull-up, C27)
+bool DcSettings.Diagnostics             // Game/Diagnostics: the "[DC diag]" log report (read-only)
 bool DcSettings.Get(SettingId)
 bool DcSettings.IsCampaignActive
 bool DcSettings.Toggle(SettingId) / Set(SettingId, bool)
@@ -142,7 +143,7 @@ not and finishes any extra instances. Core's `SettingsTaskTracker<T>` decides wh
 provisional and starts no session). Nothing else stores settings. A new persistent setting is a WS0
 change: add a `SettingId` member, a field on the task, and a toggle row.
 
-The three toggle actions are rows of `SettingToggleAction` on the vanilla `Workshop` activator. They
+The four toggle actions are rows of `SettingToggleAction` on the vanilla `Workshop` activator. They
 use contexts Normal, Queue and NoCharacter, take effect instantly, and are hidden outside a campaign.
 
 ## 4. Boat layout (`DamageControl.Game.Infrastructure.BoatLayout`, static, main thread)

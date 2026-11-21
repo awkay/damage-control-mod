@@ -1,5 +1,7 @@
 using System;
 using DamageControl.Core.Common;
+using DamageControl.Core.Diagnostics;
+using DamageControl.Game.Diagnostics;
 using DamageControl.Core.Pressure;
 using DamageControl.Game.Infrastructure;
 using HarmonyLib;
@@ -22,6 +24,7 @@ namespace DamageControl.Game.Pressure
 	/// P10 (01 §2.10, 00 §4, C30): no replacement. The prefix skips the vanilla compressor frame when
 	/// the compressor's compartment is at or below 0.35 atm or holds less air than one transfer; the
 	/// postfix charges the compartment for the air the tanks actually gained (<see cref="CompressorDraw"/>).
+	/// The charge is also handed to <see cref="DiagRecorder"/> for the diagnostics report (a no-op unless on).
 	/// </summary>
 	[HarmonyPatch(typeof(AirCompressor), "Update")]
 	internal static class CompressorDrawPatch
@@ -89,6 +92,8 @@ namespace DamageControl.Game.Pressure
 				{
 					double air = __state.Room.Air - cost;
 					__state.Room.Air = air > 0.0 ? air : 0.0;
+					if (DiagRecorder.Shared.Enabled)
+						DiagRecorder.Shared.Add(DiagnosticsRuntime.CompressorKey, cost, __state.Room.name);
 				}
 			}
 			catch (Exception e)

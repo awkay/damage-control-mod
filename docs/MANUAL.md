@@ -104,7 +104,7 @@ Some changes the mod made stay in the save, because they are ordinary game data:
 
 ## Settings
 
-Damage Control has three switches. You find them on the **Workshop** interaction wheel in the stern
+Damage Control has four switches. You find them on the **Workshop** interaction wheel in the stern
 torpedo room, listed after the workshop's own orders. They only appear while a campaign is running.
 
 | Setting | Default | When on | When off |
@@ -112,13 +112,15 @@ torpedo room, listed after the workshop's own orders. They only appear while a c
 | Hatch pressure blocking | **Off** | A closed hatch with a clearly heavier load of water and air on one side cannot be opened. | The base game's own hatch rule applies. |
 | Sailors block leaks on their own | **On** (base game) | Idle sailors go and block new leaks without an order. | Sailors block a leak only when you order it. |
 | Crew carry the wounded on their own | **On** (base game) | Crewmen carry injured shipmates to safety without an order. | The injured stay where they fell until you order help. Divers are still pulled back aboard. |
+| Damage Control diagnostics | **Off** | Every 10 seconds the game log gets a short report of air pressure, water, leaks and hatch flows (see [Diagnostics report](#diagnostics-report)). Nothing changes in play. | No report. |
 
 How the switches work:
 
 - The wheel entry names what it **will do**. With blocking off it reads "Enable hatch pressure
   blocking"; with it on, "Disable hatch pressure blocking". The other two read "Stop sailors blocking
-  leaks on their own" / "Let sailors block leaks on their own" and "Stop the crew carrying the wounded
-  on their own" / "Let the crew carry the wounded to safety".
+  leaks on their own" / "Let sailors block leaks on their own", "Stop the crew carrying the wounded
+  on their own" / "Let the crew carry the wounded to safety", and "Turn on Damage Control diagnostics" /
+  "Turn off Damage Control diagnostics".
 - A click takes effect at once. No crewman needs to be selected and nobody walks to the workshop.
 - The settings are **saved per campaign**. A new campaign starts with the defaults above. So does an
   older save made before you installed the mod; from then on the settings are saved with it.
@@ -528,9 +530,10 @@ Every line from the mod starts with `[Damage Control]`. Search the file for `Dam
 | `patch <Name> threw and falls back to vanilla behaviour` | That feature hit an error during play and switched itself off for the session. Please report it. |
 | `bootstrap step "..." failed` | Part of the mod's start-up failed. Please report it. |
 | `icons ready: N served` | The mod's icons loaded. |
-| `campaign settings created: ...` / `campaign settings restored: ...` | Your three settings for this campaign, new or loaded from the save. |
+| `campaign settings created: ...` / `campaign settings restored: ...` | Your four settings for this campaign, new or loaded from the save. |
 | `this save has no Damage Control settings yet; creating them with defaults` | An older save made without the mod. Normal. |
 | `setting <Name> is now on/off` | You flipped a switch. |
+| `[DC diag] ...` | The diagnostics report, while that switch is on. See [Diagnostics report](#diagnostics-report). |
 | `carry wounded: order given; ...` | You used "Carry the wounded to their bunks". |
 | `boat layout unknown: ...` / `... disabled: boat layout unknown` | The mod did not recognise the boat's layout, so the named feature is off. Please report it with the boat type. |
 | `conning tower compartment not found ...` / `diesel compartment not found ...` | Venting or diesel air draw is off on this boat. Please report it. |
@@ -539,6 +542,88 @@ Every line from the mod starts with `[Damage Control]`. Search the file for `Dam
 
 With `Debug` set to `True` you get many more lines, mostly describing individual events (a hatch kept
 shut, an Exhaust Blow finished, and so on).
+
+### Diagnostics report
+
+If flooding, pressure or leaks seem wrong, turn the report on and play the situation again. It changes
+nothing in play; it only writes to `output_log.txt`.
+
+**Turning it on.** On the Workshop wheel, choose "Turn on Damage Control diagnostics". The log shows
+`setting Diagnostics is now on` and `[DC diag] diagnostics on: ...`. The switch is saved with the
+campaign, so it stays on after a load until you turn it off. Older saves start with it off.
+
+**When it writes.** Every 10 seconds of real time (time compression does not make it write more often),
+only aboard and in play, and not while the game is paused. A report appears only when something is
+worth reporting: water in a room, air pressure away from 1.00 atm, a leak, or water or air moving
+through a hatch. Otherwise you get at most one line a minute, `[DC diag] all compartments dry at 1.00 atm`.
+A report has at most 40 lines; any further lines are replaced by one `... N more line(s) not shown`
+line, and the totals line is always kept.
+
+Some events are logged at once, without waiting for the next report:
+
+| Line | Meaning |
+|---|---|
+| `event: leak started on "X" in "Room"` / `event: leak stopped on "X"` | A pipe, hull fitting or hatch began or stopped leaking. |
+| `event: hatch "X" is wrecked (health 0)` / `... is no longer wrecked` | A hatch was destroyed, or repaired from 0. |
+| `event: hatch "X" blown open, seat side ... atm, far side ... atm` | A wrecked hatch gave way under the pressure behind it. |
+| `event: hatch "X" can be opened -> held shut by the pressure lock, dp(L-R) ...` | The hatch's openability changed. The reasons are `held shut by the pressure lock` (hatch pressure blocking on), `held shut for a repair`, and `held shut by the game's own rule`; `open` means it stands open. Plain opening and closing of a free hatch is not logged. |
+
+**Reading a report.** An example, taken at 8x time compression with a leaking pipe in the control room
+(numbers made up):
+
+```
+[DC diag] report at 1940-05-14 03:41:20, 80.0 game s since the last, compression x8, depth 48.6 m, deck depth 41.2 m, submerged
+[DC diag] room "Compartment 2": p 1.31 atm, air 72.05, water 6.480 m3 (10.5 % of 61.5), dW +0.00222 m3/s, toxicity -1.45 breathable, leak, hatch exchange
+[DC diag] room "Compartment 3": p 1.06 atm, air 44.10, water 0.214 m3 (0.5 % of 41.8), dW +0.00118 m3/s, toxicity -2.40 breathable, hatch exchange
+[DC diag] leak "Pipe Leak 4" in "Compartment 2": intensity 0.00200 = base 0.01000 x BlockLeak 0.20; openess 0.00070 (0.35 x intensity x difficulty 1.00), hole 1.0000, sea 5.66 atm under water, drive +4.85 atm, inflow +0.00339 m3/s; on it: Erich Brandt (block leak, working)
+[DC diag] leak hatch "Hatch 2" ("Compartment 2" | "Compartment 3"): closed-leak 0.02 x seals 0.1 (1: 0 blocking, 1 repairing) = 0.002 of the open rate, water through it +0.00118 m3/s (L->R); on it: Otto Kraus (repair 35 %, working)
+[DC diag] hatch "Hatch 2" ("Compartment 2" | "Compartment 3"): closed, wrecked, leaking, 1 seal(s), dp(L-R) +0.25 atm, water L->R +0.00118 m3/s (last frame +0.00117), air L->R +0.0026/s (last frame +0.0024)
+[DC diag] totals: water aboard 6.694 m3 (dW +0.00340 m3/s), sea inflow 0.00339 m3/s from 1 leak(s), 1 leaking hatch(es); trim pump on (water left), auto-off hold on (2 leaking)
+```
+
+Line by line (in the log each line also starts with `[Damage Control]`):
+
+1. **Header.** The game clock, the game seconds since the last report (all rates below are averaged
+   over them), the time compression, the boat's depth and deck depth, and surfaced (deck depth under
+   3.5 m) or submerged.
+2. **`room`** lines, one per compartment worth listing. `p` is the air pressure; `air` the amount of air
+   (m3 at 1 atm); `water` in m3 and as a share of the room's volume; `dW` the change in water per game
+   second since the last report (`n/a` on the first report after a load). `toxicity` is the
+   air-toxicity value the crew's choking reads, and `breathable` / `NOT breathable` says whether the crew
+   in that room choke. `leak` and `hatch exchange`
+   say why the room is listed. `water shared with "..."` marks a deck whose water the game keeps together
+   with the deck below; the totals count that water once.
+3. **`leak`** lines for pipes, valves and hull fittings. The intensity is the base value times every
+   multiplier on it, each named: `BlockLeak 0.20` is a crewman blocking the leak (base game),
+   `DC Repair Throttle 0.65` is this mod's repair throttle (1 minus the repair's progress). The openess
+   is what the game sets on the hole from the intensity and your damage-difficulty setting. `sea` is the
+   outside water pressure at the hole, `drive` the pressure pushing water in (sea pressure, plus 0.5 when
+   the hole is under water, minus the room's air pressure), and `inflow` the water per second that gives
+   (drive x hole x openess, before the game's per-step limits). Rising room pressure lowers the drive,
+   so a leak in a sealed room slows down by itself. `on it` lists crewmen ordered to block or repair it,
+   with repair progress, and whether they are `working` or still `on the way`.
+4. **`leak hatch`** lines for wrecked or disabled hatches. A closed leaking hatch passes 2 % of the open
+   rate, cut to a tenth by each crewman blocking or repairing it (`seals`). `water through it` is what
+   actually moved, left to right (negative: right to left).
+5. **`hatch`** lines for every hatch that moved air or water: open or closed, wrecked, leaking, seals,
+   the pressure difference left minus right, and the water and air moved per second, averaged since the
+   last report and in the last frame. Water and air flow from the higher pressure (`dp`) and the higher
+   water level toward the other side.
+6. **`totals`**: all water aboard and its change per second, the sea inflow summed over the leaks, the
+   trim pump (on or off, with or without water left in its tanks) and whether this mod holds its
+   automatic switch-off while anything leaks. When they ran, the compressor's draw on its room's air,
+   the diesel room's net air change (venting in, diesel draw out) and the conning tower's venting
+   follow.
+
+Checks you can make from a report: a room's `dW` should roughly equal its leaks' `inflow` minus what
+its hatches pass on (here 0.00339 - 0.00118 = 0.00221 against `dW +0.00222`); `inflow` should fall as
+`p` rises; a blocked leak shows `BlockLeak 0.20`, and a repaired one a throttle that falls as the repair
+progresses; a closed wrecked hatch's flow should drop to a tenth per seal.
+
+**What it cannot show.** The equalize order moves air and water through a hatch outside the hatch's
+own exchange, so it shows in the rooms' `p` and `dW` but not on the `hatch` line. The `inflow` figure
+is the game's leak law before its per-step limits; when a room is nearly full the real inflow is lower,
+which `dW` shows.
 
 ### The mod does not load
 
@@ -567,7 +652,8 @@ Open an issue at <https://github.com/awkay/damage-control-mod/issues>. Please in
 - what you did, what you expected, and what happened;
 - the boat type, and whether it happened at normal speed or with time compression;
 - the `[Damage Control]` lines and any exceptions from `output_log.txt`. With `Debug` set to `True`
-  the report is much more useful;
+  the report is much more useful, and for flooding, pressure or leak problems turn on the
+  [diagnostics report](#diagnostics-report) and include its `[DC diag]` lines;
 - other mods you have enabled;
 - if you can, a save from just before the problem.
 
